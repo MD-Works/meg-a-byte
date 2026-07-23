@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meg A. Byte — MD Works Assistant</title>
+<style>
+  :root {
+    --bg:        #0f1117;
+    --surface:   #181c25;
+    --surface2:  #1f2433;
+    --border:    #2a2f3e;
+    --accent:    #7c6af7;
+    --accent2:   #4fd1c5;
+    --text:      #e2e8f0;
+    --text-muted:#8892a4;
+    --danger:    #f56565;
+    --success:   #68d391;
+    --warn:      #f6ad55;
+    --radius:    10px;
+    --font-mono: 'JetBrains Mono','Fira Code',monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px; line-height: 1.6;
+    height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; height: 52px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+  .logo-mark {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 7px; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800; color: #fff;
+  }
+  .groq-badge {
+    font-size: 11px; padding: 2px 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; color: var(--text-muted); cursor: pointer; transition: border-color 0.2s;
+  }
+  .groq-badge:hover { border-color: var(--accent); color: var(--text); }
+  .groq-badge.configured { border-color: var(--success); color: var(--success); }
+
+  /* ── Nav ── */
+  nav {
+    display: flex; gap: 2px; padding: 0 24px;
+    background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .tab-btn {
+    padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted);
+    background: none; border: none; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: color 0.15s, border-color 0.15s; white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; margin-left: 5px;
+  }
+
+  /* ── Layout ── */
+  main { flex: 1; overflow: hidden; display: flex; }
+  .tab-panel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+  .tab-panel.active { display: flex; }
+  .scroll { overflow-y: auto; flex: 1; padding: 24px; }
+  .scroll::-webkit-scrollbar { width: 6px; }
+  .scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── Shared UI ── */
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; }
+  h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  p.sub { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
+  .btn {
+    padding: 8px 16px; border-radius: var(--radius);
+    font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+    transition: opacity 0.15s, transform 0.1s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { opacity: 0.88; }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-success { background: var(--success); color: #111; }
+  .btn-whatsapp { background: #25D366; color: #fff; }
+  .btn-sm { padding: 5px 11px; font-size: 12px; }
+  input, textarea, select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text); padding: 9px 12px;
+    font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 80px; }
+  select option { background: var(--surface2); }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .field { margin-bottom: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+
+  .tag {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+    background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border);
+  }
+  .tag.accent  { background: rgba(124,106,247,0.15); color: var(--accent);  border-color: rgba(124,106,247,0.3); }
+  .tag.success { background: rgba(104,211,145,0.12); color: var(--success); border-color: rgba(104,211,145,0.3); }
+  .tag.warn    { background: rgba(246,173,85,0.12);  color: var(--warn);    border-color: rgba(246,173,85,0.3);  }
+  .tag.danger  { background: rgba(245,101,101,0.12); color: var(--danger);  border-color: rgba(245,101,101,0.3); }
+  .tag.info    { background: rgba(79,209,197,0.12);  color: var(--accent2); border-color: rgba(79,209,197,0.3);  }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 13px; margin-top: 6px; }
+
+  /* ── Modals ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px; width: 460px; max-width: 95vw;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal h3 { font-size: 16px; margin-bottom: 6px; }
+  .modal p.sub { margin-bottom: 18px; }
+
+  /* client-picker grid */
+  .client-picker-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;
+  }
+  .client-pick-card {
+    padding: 12px 14px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface2);
+    cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  }
+  .client-pick-card:hover { border-color: var(--accent); background: rgba(124,106,247,0.08); }
+  .client-pick-card.selected { border-color: var(--accent); background: rgba(124,106,247,0.15); }
+  .client-pick-card .cpname { font-weight: 600; font-size: 13px; }
+  .client-pick-card .cpmeta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ── CHAT TAB ── */
+  #tab-chat { flex-direction: row; }
+  .chat-sidebar {
+    width: 220px; flex-shrink: 0; border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; background: var(--surface); overflow: hidden;
+  }
+  .chat-sidebar-header {
+    padding: 14px 14px 10px; border-bottom: 1px solid var(--border);
+    font-size: 12px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .chat-list { overflow-y: auto; flex: 1; }
+  .chat-list-item {
+    padding: 10px 14px; cursor: pointer;
+    border-bottom: 1px solid var(--border); transition: background 0.1s; font-size: 12px;
+  }
+  .chat-list-item:hover { background: var(--surface2); }
+  .chat-list-item.active { background: rgba(124,106,247,0.1); border-left: 2px solid var(--accent); }
+  .chat-list-item .cli-name { font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chat-list-item .cli-time { color: var(--text-muted); font-size: 11px; }
+
+  .chat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .chat-topbar {
+    padding: 12px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .chat-topbar .client-name { font-weight: 600; font-size: 14px; }
+  .chat-topbar .stage-label { font-size: 11px; color: var(--accent); font-weight: 600; }
+
+  .chat-messages { flex: 1; overflow-y: auto; padding: 20px 20px 0; display: flex; flex-direction: column; gap: 14px; }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .msg { display: flex; gap: 10px; align-items: flex-start; max-width: 85%; }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .msg-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .msg.assistant .msg-avatar { background: linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; }
+  .msg.user .msg-avatar { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+  .msg-bubble { padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.55; white-space: pre-wrap; }
+  .msg.assistant .msg-bubble { background: var(--surface2); color: var(--text); border-radius: 4px 12px 12px 12px; }
+  .msg.user .msg-bubble { background: var(--accent); color: #fff; border-radius: 12px 4px 12px 12px; }
+  .msg-time { font-size: 10px; color: var(--text-muted); margin-top: 3px; text-align: right; }
+
+  .typing-indicator { display: none; align-items: center; gap: 6px; padding: 10px 14px; background: var(--surface2); border-radius: 4px 12px 12px 12px; width: fit-content; margin-bottom: 4px; }
+  .typing-indicator.visible { display: flex; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); animation: bounce 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; } .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
+
+  .chat-actions { padding: 10px 20px; border-top: 1px solid var(--border); display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+  .quick-action {
+    padding: 5px 11px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; font-size: 11px; cursor: pointer; transition: border-color 0.15s; color: var(--text-muted);
+  }
+  .quick-action:hover { border-color: var(--accent); color: var(--text); }
+
+  .chat-input-row { padding: 10px 20px 14px; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
+  #chat-input { flex: 1; min-height: 42px; max-height: 120px; resize: none; border-radius: 10px; padding: 10px 14px; font-size: 13px; line-height: 1.5; }
+  #chat-send { height: 42px; width: 42px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 10px; flex-shrink: 0; font-size: 16px; }
+
+  .no-chat-selected { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: var(--text-muted); }
+  .no-chat-selected .big-icon { font-size: 48px; }
+
+  /* ── CLIENTS TAB ── */
+  .clients-layout { display: grid; grid-template-columns: 280px 1fr; gap: 0; flex: 1; overflow: hidden; }
+  .clients-list-panel { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .panel-header h3 { margin: 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .clients-list { overflow-y: auto; flex: 1; }
+  .client-item { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+  .client-item:hover { background: var(--surface2); }
+  .client-item.active { background: rgba(124,106,247,0.08); border-left: 2px solid var(--accent); }
+  .client-item-name { font-weight: 600; font-size: 13px; }
+  .client-item-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .client-detail { flex: 1; overflow-y: auto; padding: 24px; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .detail-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+  .detail-value { font-size: 13px; }
+  .detail-value a { color: var(--accent); text-decoration: none; }
+  .timeline-entry { display: flex; gap: 12px; padding-bottom: 18px; position: relative; }
+  .timeline-entry::before { content:''; position:absolute; left:15px; top:28px; bottom:0; width:1px; background:var(--border); }
+  .timeline-entry:last-child::before { display:none; }
+  .tl-dot { width:30px;height:30px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:2px; }
+  .tl-content { flex:1; }
+  .tl-label { font-weight:600;font-size:13px;margin-bottom:2px; }
+  .tl-time { font-size:11px;color:var(--text-muted); }
+  .tl-body { font-size:12px;color:var(--text-muted);margin-top:5px;line-height:1.5; }
+
+  /* ── PROPOSALS TAB ── */
+  .proposals-layout { display: grid; grid-template-columns: 280px 1fr; gap: 0; flex: 1; overflow: hidden; }
+  .proposals-client-panel { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; background: var(--surface); }
+  .proposals-client-list { overflow-y: auto; flex: 1; }
+  .prop-client-item { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+  .prop-client-item:hover { background: var(--surface2); }
+  .prop-client-item.active { background: rgba(124,106,247,0.08); border-left: 2px solid var(--accent); }
+  .prop-client-name { font-weight: 600; font-size: 13px; }
+  .prop-client-count { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .proposals-right { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .proposals-right-header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .proposals-right-header h3 { margin: 0; font-size: 14px; font-weight: 700; }
+  .proposals-list-scroll { flex: 1; overflow-y: auto; padding: 20px; }
+
+  .proposal-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 12px; cursor: pointer; transition: border-color 0.15s, transform 0.1s;
+  }
+  .proposal-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .proposal-card-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .proposal-card-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+  .proposal-card-footer { display: flex; justify-content: space-between; align-items: center; }
+
+  /* Status pill + dropdown */
+  .status-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: none; transition: opacity 0.15s;
+  }
+  .status-pill.draft    { background: rgba(246,173,85,0.15);  color: var(--warn);    border: 1px solid rgba(246,173,85,0.3); }
+  .status-pill.sent     { background: rgba(124,106,247,0.15); color: var(--accent);  border: 1px solid rgba(124,106,247,0.3); }
+  .status-pill.accepted { background: rgba(104,211,145,0.15); color: var(--success); border: 1px solid rgba(104,211,145,0.3); }
+  .status-pill.declined { background: rgba(245,101,101,0.15); color: var(--danger);  border: 1px solid rgba(245,101,101,0.3); }
+  .status-pill:hover { opacity: 0.8; }
+  .status-select { font-size: 12px; padding: 4px 8px; width: auto; border-radius: 20px; }
+
+  /* Proposal detail panel */
+  .proposal-detail-panel {
+    display: none; position: absolute; inset: 0; z-index: 10;
+    background: var(--bg); flex-direction: column;
+  }
+  .proposal-detail-panel.open { display: flex; }
+  .pd-header {
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap;
+  }
+  .pd-header-info { flex: 1; min-width: 0; }
+  .pd-header-info .pd-title { font-weight: 700; font-size: 15px; }
+  .pd-header-info .pd-meta { font-size: 12px; color: var(--text-muted); }
+  .pd-body { flex: 1; overflow-y: auto; padding: 28px; max-width: 860px; margin: 0 auto; width: 100%; }
+
+  /* Proposal rendered content */
+  .proposal-rendered { font-size: 14px; line-height: 1.75; color: var(--text); }
+  .proposal-rendered h1 { font-size: 22px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.03em; color: var(--accent2); }
+  .proposal-rendered h2 { font-size: 16px; font-weight: 700; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .proposal-rendered h3 { font-size: 14px; font-weight: 600; margin: 16px 0 8px; color: var(--accent); }
+  .proposal-rendered p { margin-bottom: 10px; }
+  .proposal-rendered ul, .proposal-rendered ol { margin: 8px 0 12px 20px; }
+  .proposal-rendered li { margin-bottom: 5px; }
+  .proposal-rendered strong { color: var(--text); font-weight: 700; }
+  .proposal-rendered em { color: var(--accent2); font-style: normal; }
+  .proposal-rendered table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+  .proposal-rendered th { background: var(--surface2); color: var(--text-muted); text-align: left; padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+  .proposal-rendered td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  .proposal-rendered tr:last-child td { border-bottom: none; }
+  .proposal-rendered .total-row td { font-weight: 700; color: var(--accent2); border-top: 2px solid var(--border); }
+  .proposal-rendered .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .proposal-rendered .meta-block { background: var(--surface2); border-radius: 8px; padding: 14px 16px; margin-bottom: 20px; font-size: 13px; color: var(--text-muted); }
+  .proposal-rendered .meta-block strong { color: var(--text); }
+
+  /* Raw edit textarea */
+  .proposal-raw { display: none; width: 100%; min-height: 500px; font-family: var(--font-mono); font-size: 12px; line-height: 1.7; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; color: var(--text); resize: vertical; }
+  .proposal-raw.visible { display: block; }
+
+  /* Status history */
+  .status-history { margin-top: 20px; }
+  .sh-item { display: flex; gap: 10px; align-items: flex-start; padding-bottom: 12px; }
+  .sh-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: 5px; flex-shrink: 0; }
+  .sh-text { font-size: 12px; color: var(--text-muted); }
+  .sh-text strong { color: var(--text); }
+
+  /* ── STACK TAB ── */
+  .stack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .stack-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .stack-card-title { font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .stack-icon { font-size: 18px; }
+  .stack-card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+  .stack-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+  .rate-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; background: rgba(79,209,197,0.1); color: var(--accent2); border: 1px solid rgba(79,209,197,0.2); font-size: 11px; font-weight: 600; }
+
+  /* ── ACTIVITY TAB ── */
+  .activity-feed { max-width: 680px; }
+  .activity-item { display: flex; gap: 12px; padding-bottom: 16px; position: relative; }
+  .activity-item::before { content:''; position:absolute; left:15px; top:30px; bottom:0; width:1px; background:var(--border); }
+  .activity-item:last-child::before { display:none; }
+  .act-icon { width:30px;height:30px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0; }
+  .act-content { flex:1; padding-top:5px; }
+  .act-title { font-size:13px;font-weight:500; }
+  .act-title strong { color:var(--accent); }
+  .act-time { font-size:11px;color:var(--text-muted);margin-top:1px; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(60px);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 18px; font-size: 13px; font-weight: 500; z-index: 200;
+    transition: transform 0.3s ease; pointer-events: none;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 700px) {
+    .clients-layout, .proposals-layout { grid-template-columns: 1fr; }
+    .clients-list-panel, .proposals-client-panel { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ── MODALS ── -->
+
+<!-- API Key -->
+<div class="modal-overlay" id="api-modal">
+  <div class="modal">
+    <h3>🔑 Wake up Meg</h3>
+    <p class="sub">Meg A. Byte runs on Groq. Get a free key at <a href="https://console.groq.com" target="_blank" style="color:var(--accent)">console.groq.com</a>. Stored in your browser only — never sent anywhere except Groq.</p>
+    <div class="field"><label>API Key</label><input type="password" id="api-key-input" placeholder="gsk_..." /></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn btn-primary" onclick="saveApiKey()">Save & continue</button>
+      <button class="btn btn-ghost" onclick="closeModal('api-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Client -->
+<div class="modal-overlay" id="new-client-modal">
+  <div class="modal">
+    <h3>➕ New Client</h3>
+    <p class="sub">Add a client to start tracking interactions and generating proposals.</p>
+    <div class="field"><label>Full Name *</label><input id="nc-name" placeholder="Jane Smith" /></div>
+    <div class="field"><label>Business / Company</label><input id="nc-company" placeholder="Acme Pty Ltd" /></div>
+    <div class="field"><label>WhatsApp</label><input id="nc-phone" placeholder="+27 83 123 4567" /></div>
+    <div class="field"><label>Email</label><input id="nc-email" placeholder="jane@acme.co.za" /></div>
+    <div class="field">
+      <label>Industry</label>
+      <select id="nc-industry">
+        <option value="">Select…</option>
+        <option>Retail / E-commerce</option><option>Hospitality & Events</option>
+        <option>Health & Wellness</option><option>Property / Real Estate</option>
+        <option>Community / NGO</option><option>Media & Entertainment</option>
+        <option>Professional Services</option><option>Education</option><option>Other</option>
+      </select>
+    </div>
+    <div class="field"><label>Initial notes</label><textarea id="nc-notes" placeholder="What do they need?"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn btn-primary" onclick="saveNewClient()">Create client</button>
+      <button class="btn btn-ghost" onclick="closeModal('new-client-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Session Picker (client + context) -->
+<div class="modal-overlay" id="session-modal">
+  <div class="modal">
+    <h3>💬 New Session</h3>
+    <p class="sub">Choose a client and optionally give this session a focus topic.</p>
+    <div class="field">
+      <label>Select Client</label>
+      <div class="client-picker-grid" id="session-client-picker"></div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="closeModal('session-modal');setTimeout(()=>document.getElementById('new-client-modal').classList.add('open'),100)">＋ Add new client instead</button>
+    </div>
+    <div class="field"><label>Session focus (optional)</label><input id="session-topic" placeholder="e.g. Booking system for a salon, Community reporting app…" /></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn btn-primary" onclick="confirmNewSession()">Start session</button>
+      <button class="btn btn-ghost" onclick="closeModal('session-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Status change modal -->
+<div class="modal-overlay" id="status-modal">
+  <div class="modal" style="width:340px">
+    <h3>Update Proposal Status</h3>
+    <p class="sub">Choose the new status for this proposal.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px" id="status-options"></div>
+    <button class="btn btn-ghost btn-sm" onclick="closeModal('status-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">M</div>
+    <span>Meg A. Byte</span>
+    <span style="font-weight:400;color:var(--text-muted);font-size:12px;margin-left:2px">by MD Works</span>
+  </div>
+  <button class="groq-badge" id="api-badge" onclick="openModal('api-modal')">⚡ Set Groq key</button>
+</header>
+
+<!-- Nav -->
+<nav>
+  <button class="tab-btn active" data-tab="chat"      onclick="switchTab('chat',this)">💬 Assistant</button>
+  <button class="tab-btn"        data-tab="clients"   onclick="switchTab('clients',this)">👤 Clients <span class="badge" id="client-count-badge">0</span></button>
+  <button class="tab-btn"        data-tab="proposals" onclick="switchTab('proposals',this)">📄 Proposals <span class="badge" id="proposal-count-badge">0</span></button>
+  <button class="tab-btn"        data-tab="activity"  onclick="switchTab('activity',this)">📋 Activity</button>
+  <button class="tab-btn"        data-tab="stack"     onclick="switchTab('stack',this)">🛠 Stack & Rates</button>
+</nav>
+
+<main>
+
+<!-- ══════════ CHAT TAB ══════════ -->
+<div class="tab-panel active" id="tab-chat">
+  <div class="chat-sidebar">
+    <div class="chat-sidebar-header">Sessions <button class="btn btn-sm btn-primary" onclick="openSessionModal()">＋</button></div>
+    <div class="chat-list" id="chat-list"></div>
+  </div>
+  <div class="chat-main" id="chat-main-area">
+    <div class="no-chat-selected" id="no-chat">
+      <div class="big-icon">🤖</div>
+      <div style="font-weight:700;font-size:16px">Hi, I'm Meg A. Byte</div>
+      <p style="font-size:13px;max-width:300px;text-align:center;color:var(--text-muted)">MD Works' client intake assistant. Start a session with a client and I'll ask the right questions to scope and price their project.</p>
+      <button class="btn btn-primary" onclick="openSessionModal()">＋ New session</button>
+    </div>
+    <div id="active-chat" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+      <div class="chat-topbar">
+        <div>
+          <div class="client-name" id="chat-client-name">—</div>
+          <div class="stage-label" id="chat-stage-label">Intake</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-sm btn-ghost" onclick="generateProposal()">📄 Generate proposal</button>
+          <button class="btn btn-sm btn-ghost" onclick="endSession()">✓ End session</button>
+        </div>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div style="padding:0 20px 4px">
+        <div class="typing-indicator" id="typing-indicator">
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+          <span style="font-size:12px;color:var(--text-muted);margin-left:4px">Meg is thinking…</span>
+        </div>
+      </div>
+      <div class="chat-actions">
+        <span class="quick-action" onclick="quickSend('Tell me more about your vision for this project.')">More detail</span>
+        <span class="quick-action" onclick="quickSend('What budget range are you working with?')">Ask budget</span>
+        <span class="quick-action" onclick="quickSend('When would you need this completed by?')">Ask timeline</span>
+        <span class="quick-action" onclick="quickSend('Who are the end users of this product?')">Target users</span>
+        <span class="quick-action" onclick="quickSend('Will you need any admin or login functionality?')">Auth needs</span>
+      </div>
+      <div class="chat-input-row">
+        <textarea id="chat-input" placeholder="Type a message…" rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
+          oninput="autoResize(this)"></textarea>
+        <button class="btn btn-primary" id="chat-send" onclick="sendMessage()">↑</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ CLIENTS TAB ══════════ -->
+<div class="tab-panel" id="tab-clients">
+  <div class="clients-layout">
+    <div class="clients-list-panel">
+      <div class="panel-header">
+        <h3>Clients</h3>
+        <button class="btn btn-sm btn-primary" onclick="openModal('new-client-modal')">＋</button>
+      </div>
+      <div class="clients-list" id="clients-list"></div>
+    </div>
+    <div class="client-detail" id="client-detail">
+      <div class="empty-state"><div class="icon">👤</div><strong>Select a client</strong><p>View details, notes, and proposal history.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PROPOSALS TAB ══════════ -->
+<div class="tab-panel" id="tab-proposals" style="position:relative">
+  <div class="proposals-layout">
+    <!-- Left: client list -->
+    <div class="proposals-client-panel">
+      <div class="panel-header"><h3>Clients</h3></div>
+      <div class="proposals-client-list" id="proposals-client-list"></div>
+    </div>
+    <!-- Right: proposals for selected client -->
+    <div class="proposals-right">
+      <div class="proposals-right-header">
+        <h3 id="proposals-right-title">Select a client</h3>
+        <button class="btn btn-sm btn-primary" id="new-proposal-btn" style="display:none" onclick="newProposalFromTab()">＋ New proposal</button>
+      </div>
+      <div class="proposals-list-scroll" id="proposals-list-scroll">
+        <div class="empty-state" id="proposals-empty-state">
+          <div class="icon">👈</div>
+          <strong>Select a client</strong>
+          <p>Choose a client on the left to see their proposals.</p>
+        </div>
+        <div id="proposals-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Proposal detail overlay (inside tab) -->
+  <div class="proposal-detail-panel" id="proposal-detail-panel">
+    <div class="pd-header">
+      <button class="btn btn-ghost btn-sm" onclick="closeProposalDetail()">← Back</button>
+      <div class="pd-header-info">
+        <div class="pd-title" id="pd-title"></div>
+        <div class="pd-meta" id="pd-meta"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="pd-toggle-raw" onclick="toggleRawEdit()">✏ Edit raw</button>
+      <button class="btn btn-ghost btn-sm" onclick="copyProposal()">⧉ Copy</button>
+      <button class="btn btn-ghost btn-sm" onclick="printProposal()">🖨 Print</button>
+      <button class="btn btn-whatsapp btn-sm" onclick="whatsappProposal()">💬 WhatsApp</button>
+      <button class="btn btn-ghost btn-sm" id="pd-status-btn" onclick="openStatusModal()">● Status</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteProposal()">🗑</button>
+    </div>
+    <div class="pd-body">
+      <div class="proposal-rendered" id="pd-rendered"></div>
+      <textarea class="proposal-raw" id="pd-raw" oninput="rawEdited()"></textarea>
+      <div class="status-history" id="pd-status-history"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ ACTIVITY TAB ══════════ -->
+<div class="tab-panel" id="tab-activity">
+  <div class="scroll">
+    <div style="margin-bottom:20px"><h2>Activity Log</h2><p class="sub">Every client interaction, proposal, and update — in chronological order.</p></div>
+    <div class="activity-feed" id="activity-feed"></div>
+    <div class="empty-state" id="activity-empty" style="display:none"><div class="icon">📋</div><strong>No activity yet</strong><p>Activity is logged as you work.</p></div>
+  </div>
+</div>
+
+<!-- ══════════ STACK TAB ══════════ -->
+<div class="tab-panel" id="tab-stack">
+  <div class="scroll">
+    <div style="margin-bottom:20px"><h2>Stack & Rates</h2><p class="sub">MD Works technology stack, capabilities, and rate guidelines. The assistant draws from this to scope and price every proposal.</p></div>
+    <div class="stack-grid" id="stack-grid"></div>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════
+let state = {
+  apiKey: '',
+  clients: [], proposals: [], sessions: [], activity: [],
+  activeSessionId: null, activeClientId: null,
+  activeProposalId: null, proposalsClientId: null,
+};
+
+// ════════════════════════════════════════
+// STACK KNOWLEDGE BASE
+// ════════════════════════════════════════
+const STACK = [
+  { icon:'🌐', title:'Static Frontend', desc:'Vanilla HTML, CSS, JavaScript. No frameworks, no build steps. Mobile-first, fast, deployable anywhere via drag-and-drop.', tags:['HTML','CSS','Vanilla JS'], rate:'R 350–450/hr', typical:'R 2,500 – R 8,000 per page/feature' },
+  { icon:'🟠', title:'Cloudflare Pages & Workers', desc:'Zero-cost static hosting and serverless compute at the edge. Ideal for sites, APIs, and proxy layers. Deploys from GitHub.', tags:['Cloudflare Pages','Workers','D1','KV','Wrangler'], rate:'R 350–450/hr', typical:'Hosting: R 0/month (free tier)' },
+  { icon:'📊', title:'Google Apps Script + Sheets', desc:'Serverless REST API backed by Google Sheets as a database. CRUD apps, admin dashboards, multi-user tools. Zero backend cost.', tags:['GAS','Google Sheets','REST API','doGet/doPost'], rate:'R 350–450/hr', typical:'Backend: R 0/month (free tier)' },
+  { icon:'🔷', title:'TypeScript + Cloudflare D1', desc:'TypeScript Workers with D1 SQLite at the edge and Zod validation. For typed APIs needing migrations and structured queries.', tags:['TypeScript','D1 SQLite','Zod','Wrangler'], rate:'R 400–500/hr', typical:'R 6,000 – R 18,000 for a REST API' },
+  { icon:'🗺️', title:'Leaflet.js & Geo Tools', desc:'Interactive maps with custom markers, filters, coordinate picking, and address search via Nominatim. No API key cost.', tags:['Leaflet.js','Nominatim','Haversine','GeoJSON'], rate:'R 400/hr', typical:'R 4,000 – R 12,000 depending on features' },
+  { icon:'📱', title:'PWA / Offline-First', desc:'Progressive Web Apps with Service Workers and deferred sync. Works on low-connectivity devices — ideal for South African informal sector.', tags:['Service Worker','localStorage','PWA','IndexedDB'], rate:'R 400–450/hr', typical:'R 5,000 – R 15,000' },
+  { icon:'💬', title:'WhatsApp Integration', desc:'wa.me deep links for notifications, booking confirmations, winner alerts. Human-in-the-loop — no Business API cost.', tags:['wa.me','WhatsApp markdown','Deep links'], rate:'R 350/hr', typical:'R 800 – R 2,000 as an add-on' },
+  { icon:'🖼️', title:'ImgBB Image Uploads', desc:'Client-side image compression and upload to ImgBB API. Stores only URLs — no Drive OAuth, no file-handling complexity.', tags:['ImgBB','Canvas API','Client compression'], rate:'R 350/hr', typical:'R 500 – R 1,500 as an add-on' },
+  { icon:'🤖', title:'AI Chatbot (Groq / Claude)', desc:'Embedded AI assistants using Groq free tier (Llama 3) or Anthropic Claude. Knowledge-base bots, proposal generation, Q&A.', tags:['Groq','Llama 3','Claude','System prompts'], rate:'R 450–500/hr', typical:'R 4,000 – R 12,000' },
+  { icon:'🎵', title:'Streaming & Media', desc:'YouTube IFrame API for ads, internet radio with Workers KV state, playlist management, live listener counts.', tags:['YouTube IFrame','Workers KV','HLS','PWA audio'], rate:'R 400/hr', typical:'R 6,000 – R 20,000' },
+  { icon:'🔐', title:'Auth Patterns', desc:'PIN-based admin access in Script Properties, invite-token onboarding for multi-admin systems. Zero third-party auth cost.', tags:['PIN auth','Invite tokens','Session storage'], rate:'R 400/hr', typical:'R 1,500 – R 4,000' },
+  { icon:'📦', title:'Project Sizes & Timelines', desc:'Landing pages: 1–3 days. CRUD web apps: 1–3 weeks. Full-stack with API: 2–6 weeks. Fixed-price after scoping.', tags:['Fixed-price','Milestone billing','ZAR'], rate:'Per-project', typical:'Landing R3k–R8k · App R8k–R35k · API R6k–R18k' },
+];
+
+function buildSystemPrompt(client) {
+  return `You are Meg A. Byte — the friendly, sharp, and slightly witty client intake assistant for MD Works, built by Morney Deetlefs, a South African freelance web developer based in Durban/KZN.
+
+Your personality: warm, professional, and occasionally playful with a light tech pun when it fits naturally. You make clients feel heard and confident, not overwhelmed.
+
+Your role: have a natural conversation with a potential client to understand their concept, then help scope and price a real project using MD Works' tech stack.
+
+== MD WORKS TECH STACK (use this to scope and price) ==
+${STACK.map(s=>`• ${s.title}: ${s.desc} | Typical: ${s.typical}`).join('\n')}
+
+== PRICING PHILOSOPHY ==
+- All prices in ZAR. Fixed-price per project, not hourly.
+- Always recommend the simplest stack that meets the need.
+- Zero-infrastructure-cost preferred (Cloudflare free, GAS+Sheets as DB).
+- Add WhatsApp integration for any client-facing notification flow.
+
+== CONVERSATION STAGES ==
+1. CONCEPT INTAKE — understand what they want at a high level
+2. REQUIREMENTS — ask about features, data, users, auth, mobile, integrations
+3. CONSTRAINTS — budget range, timeline, client's technical ability
+4. CLARIFICATION — resolve ambiguities before proposing
+5. READY TO PROPOSE — recap and offer to generate a formal proposal
+
+== RULES ==
+- Ask ONE question at a time. Never fire multiple questions.
+- Be warm, conversational, professional — not robotic.
+- When you have enough info, say something like: "I think I've got enough bytes to compile a proper proposal — want me to generate it?" (keep Meg's voice, vary the phrasing naturally)
+- Never give specific prices until you have the full picture.
+
+Current client: ${client.name}${client.company ? ' from ' + client.company : ''}${client.industry ? ' (' + client.industry + ')' : ''}.${client.notes ? '\nInitial notes: ' + client.notes : ''}`;
+}
+
+// ════════════════════════════════════════
+// PROPOSAL MARKDOWN → HTML RENDERER
+// ════════════════════════════════════════
+function renderProposalMarkdown(md) {
+  if (!md) return '';
+  let html = md
+    // Strip ASCII box-drawing chars and replace with spaces
+    .replace(/[─━─┄┈═╌╍]/g, '-')
+    .replace(/[│┃┆┊╎╏]/g, ' ')
+    .replace(/[┌┍┎┏┐┑┒┓└┕┖┗┘┙┚┛├┝┞┟┠┡┢┣┤┥┦┧┨┩┪┫┬┭┮┯┰┱┲┳┴┵┶┷┸┹┺┻┼┽┾┿╀╁╂╃╄╅╆╇╈╉╊╋]/g, '+')
+    // Headings
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    // Bold
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // Italic / em highlight
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // HR
+    .replace(/^[-*_]{3,}$/gm, '<hr class="divider">')
+    // Unordered lists (- or •)
+    .replace(/^[•\-\*] (.+)$/gm, '<li>$1</li>')
+    // Ordered lists
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    // Tables (pipe syntax)
+    .replace(/^\|(.+)\|$/gm, (line) => {
+      const cells = line.split('|').slice(1,-1).map(c=>c.trim());
+      return '__TABLEROW__' + cells.map(c=>`<td>${c}</td>`).join('') + '__ENDROW__';
+    })
+    // Separator row (|---|---|)
+    .replace(/^\|[-\s:|]+\|$/gm, '__TABLESEP__');
+
+  // Wrap table rows
+  html = html.replace(/((__TABLEROW__.+__ENDROW__\n?)+)/g, (block) => {
+    const rows = block.trim().split('\n');
+    let tableHtml = '<table><thead><tr>';
+    const firstRow = rows[0].replace('__TABLEROW__','').replace('__ENDROW__','');
+    tableHtml += firstRow.replace(/<td>/g,'<th>').replace(/<\/td>/g,'</th>') + '</tr></thead><tbody>';
+    let isTotalNext = false;
+    for (let i = 1; i < rows.length; i++) {
+      if (!rows[i] || rows[i] === '__TABLESEP__') continue;
+      const rowContent = rows[i].replace('__TABLEROW__','').replace('__ENDROW__','');
+      const isTotal = /total|grand total|subtotal/i.test(rowContent);
+      tableHtml += `<tr${isTotal?' class="total-row"':''}>` + rowContent + '</tr>';
+    }
+    tableHtml += '</tbody></table>';
+    return tableHtml;
+  });
+  html = html.replace(/__TABLESEP__/g, '').replace(/__TABLEROW__|__ENDROW__/g, '');
+
+  // Wrap consecutive <li> in <ul>
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, (block) => `<ul>${block}</ul>`);
+
+  // Wrap remaining lines in <p> (skip already-tagged lines)
+  html = html.split('\n').map(line => {
+    line = line.trim();
+    if (!line) return '';
+    if (/^<(h[123]|ul|ol|li|table|hr|p)/.test(line)) return line;
+    return `<p>${line}</p>`;
+  }).join('\n');
+
+  // Meta block for PROPOSAL / Client / Date lines at top
+  html = html.replace(/^(<p>PROPOSAL.*?<\/p>\n?(<p>(Client|Date|Reference):.*?<\/p>\n?)*)/m, (block) => {
+    return `<div class="meta-block">${block.replace(/<\/?p>/g,'')}</div>`;
+  });
+
+  return html;
+}
+
+// ════════════════════════════════════════
+// PERSISTENCE
+// ════════════════════════════════════════
+function save() {
+  localStorage.setItem('mdworks_v2', JSON.stringify({
+    clients: state.clients, proposals: state.proposals,
+    sessions: state.sessions, activity: state.activity,
+  }));
+}
+function load() {
+  const raw = localStorage.getItem('mdworks_v2');
+  if (raw) { const d = JSON.parse(raw); Object.assign(state, { clients: d.clients||[], proposals: d.proposals||[], sessions: d.sessions||[], activity: d.activity||[] }); }
+  state.apiKey = localStorage.getItem('mdworks_groq_key') || '';
+}
+
+// ════════════════════════════════════════
+// MODALS
+// ════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function saveApiKey() {
+  state.apiKey = document.getElementById('api-key-input').value.trim();
+  localStorage.setItem('mdworks_groq_key', state.apiKey);
+  updateApiBadge(); closeModal('api-modal');
+  toast('Groq key saved ✓');
+}
+function updateApiBadge() {
+  const b = document.getElementById('api-badge');
+  if (state.apiKey) { b.textContent = '✓ Groq connected'; b.classList.add('configured'); }
+  else { b.textContent = '⚡ Set Groq key'; b.classList.remove('configured'); }
+}
+
+// ════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════
+function toast(msg, dur=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ════════════════════════════════════════
+// TAB SWITCHING
+// ════════════════════════════════════════
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+  if (id==='clients')   renderClients();
+  if (id==='proposals') renderProposalsTab();
+  if (id==='activity')  renderActivity();
+  if (id==='stack')     renderStack();
+}
+
+// ════════════════════════════════════════
+// SESSION / CHAT
+// ════════════════════════════════════════
+let pickedClientId = null;
+
+function openSessionModal() {
+  if (!state.apiKey) { openModal('api-modal'); return; }
+  pickedClientId = null;
+  const grid = document.getElementById('session-client-picker');
+  if (state.clients.length === 0) {
+    grid.innerHTML = '<p style="font-size:13px;color:var(--text-muted);grid-column:1/-1">No clients yet.</p>';
+  } else {
+    grid.innerHTML = state.clients.map(c => `
+      <div class="client-pick-card" id="cpcard-${c.id}" onclick="pickClient('${c.id}')">
+        <div class="cpname">${c.name}</div>
+        <div class="cpmeta">${c.company || c.industry || '—'}</div>
+      </div>`).join('');
+  }
+  document.getElementById('session-topic').value = '';
+  openModal('session-modal');
+}
+
+function pickClient(id) {
+  pickedClientId = id;
+  document.querySelectorAll('.client-pick-card').forEach(el=>el.classList.remove('selected'));
+  const card = document.getElementById('cpcard-'+id);
+  if (card) card.classList.add('selected');
+}
+
+function confirmNewSession() {
+  if (!pickedClientId) { toast('Please select a client first'); return; }
+  const client = state.clients.find(c=>c.id===pickedClientId);
+  if (!client) return;
+  const topic = document.getElementById('session-topic').value.trim();
+  closeModal('session-modal');
+
+  const session = {
+    id: uid(), clientId: client.id, clientName: client.name,
+    clientCompany: client.company||'', clientIndustry: client.industry||'',
+    messages: [], stage: 'Intake', topic,
+    createdAt: new Date().toISOString(),
+  };
+  state.sessions.unshift(session);
+  state.activeSessionId = session.id;
+  save(); renderChatList(); openSession(session.id);
+  logActivity('💬','New session started',`with <strong>${client.name}</strong>${topic?' — '+topic:''}`);
+
+  const greeting = `Hi! I'm Meg A. Byte — the MD Works project assistant. 👋\n\nI'm here to help Morney understand your project so we can put together a tailored proposal and cost estimate.${topic ? `\n\nI see you've noted: "${topic}" — great starting point!` : ''}\n\nTo kick things off — what would you like to build? Even a rough concept works perfectly. The more you share, the better I can scope it.`;
+  addMessage(session.id, 'assistant', greeting);
+}
+
+function openSession(id) {
+  state.activeSessionId = id;
+  const session = state.sessions.find(s=>s.id===id);
+  if (!session) return;
+  document.querySelectorAll('.chat-list-item').forEach(el=>el.classList.remove('active'));
+  const item = document.querySelector(`[data-session="${id}"]`);
+  if (item) item.classList.add('active');
+  document.getElementById('no-chat').style.display = 'none';
+  const ac = document.getElementById('active-chat');
+  ac.style.display = 'flex'; ac.style.flexDirection = 'column';
+  document.getElementById('chat-client-name').textContent = session.clientName + (session.topic ? ' — ' + session.topic : '');
+  document.getElementById('chat-stage-label').textContent = '⬡ ' + session.stage;
+  renderMessages(session);
+}
+
+function renderChatList() {
+  const el = document.getElementById('chat-list');
+  if (!state.sessions.length) { el.innerHTML = `<div style="padding:20px 14px;font-size:12px;color:var(--text-muted)">No sessions yet.</div>`; return; }
+  el.innerHTML = state.sessions.map(s=>`
+    <div class="chat-list-item ${s.id===state.activeSessionId?'active':''}" data-session="${s.id}" onclick="openSession('${s.id}')">
+      <div class="cli-name">${s.clientName}</div>
+      <div class="cli-time">${s.stage} · ${relTime(s.createdAt)}</div>
+    </div>`).join('');
+}
+
+function renderMessages(session) {
+  const el = document.getElementById('chat-messages');
+  el.innerHTML = session.messages.map(m=>`
+    <div class="msg ${m.role}">
+      <div class="msg-avatar" title="${m.role==='assistant'?'Meg A. Byte':'Client'}">${m.role==='assistant'?'🤖':'👤'}</div>
+      <div>
+        <div class="msg-bubble">${escHtml(m.content)}</div>
+        <div class="msg-time">${shortTime(m.ts)}</div>
+      </div>
+    </div>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function addMessage(sessionId, role, content) {
+  const session = state.sessions.find(s=>s.id===sessionId);
+  if (!session) return;
+  session.messages.push({ role, content, ts: new Date().toISOString() });
+  save();
+  if (sessionId===state.activeSessionId) renderMessages(session);
+}
+
+async function sendMessage() {
+  if (!state.activeSessionId) return;
+  if (!state.apiKey) { openModal('api-modal'); return; }
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = ''; input.style.height = 'auto';
+  const session = state.sessions.find(s=>s.id===state.activeSessionId);
+  addMessage(state.activeSessionId, 'user', text);
+
+  const client = state.clients.find(c=>c.id===session.clientId);
+  if (client) {
+    if (!client.timeline) client.timeline = [];
+    client.timeline.push({ type:'message', label:'Client message', body:text.slice(0,120), ts:new Date().toISOString() });
+    save();
+  }
+
+  const typing = document.getElementById('typing-indicator');
+  typing.classList.add('visible');
+
+  try {
+    const messages = [
+      { role:'system', content: buildSystemPrompt(client||{ name:session.clientName, company:session.clientCompany, industry:session.clientIndustry }) },
+      ...session.messages.filter(m=>m.role!=='system').map(m=>({ role:m.role, content:m.content }))
+    ];
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${state.apiKey}` },
+      body: JSON.stringify({ model:'llama-3.1-8b-instant', messages, temperature:0.7, max_tokens:600 })
+    });
+    if (!res.ok) throw new Error(`Groq ${res.status}`);
+    const data = await res.json();
+    const reply = data.choices[0].message.content;
+    addMessage(state.activeSessionId, 'assistant', reply);
+    const lower = reply.toLowerCase();
+    if (lower.includes('budget')||lower.includes('cost')) updateStage('Requirements');
+    if (lower.includes('timeline')||lower.includes('deadline')) updateStage('Requirements');
+    if (lower.includes('i have enough')||lower.includes('let me recap')||lower.includes('based on what')) updateStage('Summarising');
+  } catch(err) {
+    addMessage(state.activeSessionId, 'assistant', `⚠ Could not reach Groq: ${err.message}\n\nCheck your API key.`);
+  } finally {
+    typing.classList.remove('visible');
+  }
+}
+
+function quickSend(text) { document.getElementById('chat-input').value = text; sendMessage(); }
+
+function updateStage(stage) {
+  const session = state.sessions.find(s=>s.id===state.activeSessionId);
+  if (!session||session.stage===stage) return;
+  session.stage = stage;
+  document.getElementById('chat-stage-label').textContent = '⬡ '+stage;
+  save(); renderChatList();
+}
+
+async function generateProposal() {
+  if (!state.activeSessionId) return;
+  if (!state.apiKey) { openModal('api-modal'); return; }
+  const session = state.sessions.find(s=>s.id===state.activeSessionId);
+  if (!session) return;
+
+  document.getElementById('typing-indicator').classList.add('visible');
+  addMessage(state.activeSessionId, 'assistant', '📄 Generating proposal — using the larger model, this may take a moment…');
+
+  const proposalPrompt = `Based on everything discussed, generate a formal project proposal for MD Works. Use clean Markdown formatting — headings, bullet lists, and a pipe-format table for costs. Do NOT use ASCII art, box-drawing characters, or tab-indented tables.
+
+Format:
+
+# [Project Title]
+
+PROPOSAL — [Project Title]
+Client: [Name / Company]
+Date: ${new Date().toLocaleDateString('en-ZA')}
+
+## Executive Summary
+[2-3 sentences]
+
+## Scope of Work
+[Bullet list of deliverables]
+
+## Technical Approach
+[Which stack components and why — reference MD Works stack]
+
+## Cost Estimate
+
+| Line Item | Description | Est. (ZAR) |
+|-----------|-------------|------------|
+| ... | ... | R x,xxx |
+| **Total** | | **R x,xxx** |
+
+## Timeline
+[Phases with week estimates]
+
+## Assumptions & Exclusions
+[What is and isn't included]
+
+## Next Steps
+[What the client does to proceed]
+
+Use real ZAR figures based on MD Works rates. Keep it professional but human.`;
+
+  try {
+    const client = state.clients.find(c=>c.id===session.clientId) || { name:session.clientName, company:session.clientCompany, industry:session.clientIndustry };
+    const messages = [
+      { role:'system', content: buildSystemPrompt(client) },
+      ...session.messages.filter(m=>m.role!=='system').map(m=>({ role:m.role, content:m.content })),
+      { role:'user', content: proposalPrompt }
+    ];
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${state.apiKey}` },
+      body: JSON.stringify({ model:'llama-3.3-70b-versatile', messages, temperature:0.4, max_tokens:1500 })
+    });
+    if (!res.ok) throw new Error(`Groq ${res.status}`);
+    const data = await res.json();
+    const proposalText = data.choices[0].message.content;
+    const titleMatch = proposalText.match(/^#\s*(.+)$/m);
+    const title = titleMatch ? titleMatch[1].replace(/^PROPOSAL\s*[—-]\s*/,'').trim() : `Proposal for ${session.clientName}`;
+
+    const proposal = {
+      id: uid(), sessionId: session.id, clientId: session.clientId,
+      clientName: session.clientName, title, body: proposalText,
+      version: 1, status: 'draft',
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      statusHistory: [{ status:'draft', ts: new Date().toISOString(), note:'Created' }],
+    };
+    state.proposals.unshift(proposal);
+    session.stage = 'Proposal drafted';
+    save(); updateBadges(); renderChatList();
+
+    if (client.timeline) {
+      client.timeline.push({ type:'proposal', label:'Proposal generated', body:title, ts:new Date().toISOString() });
+      save();
+    }
+    logActivity('📄','Proposal created',`<strong>${title}</strong> for ${session.clientName}`);
+    addMessage(state.activeSessionId,'assistant',`✅ Proposal created: "${title}"\n\nYou can view, edit, and send it from the Proposals tab.`);
+  } catch(err) {
+    addMessage(state.activeSessionId,'assistant',`⚠ Could not generate proposal: ${err.message}`);
+  } finally {
+    document.getElementById('typing-indicator').classList.remove('visible');
+  }
+}
+
+function endSession() {
+  if (!state.activeSessionId) return;
+  const session = state.sessions.find(s=>s.id===state.activeSessionId);
+  if (!session) return;
+  session.stage = 'Closed'; session.closedAt = new Date().toISOString();
+  save();
+  addMessage(state.activeSessionId,'assistant','✓ Session closed. All messages are saved in the client history.');
+  renderChatList();
+  logActivity('✓','Session closed',`with <strong>${session.clientName}</strong>`);
+}
+
+// ════════════════════════════════════════
+// CLIENTS
+// ════════════════════════════════════════
+function saveNewClient() {
+  const name = document.getElementById('nc-name').value.trim();
+  if (!name) { toast('Name is required'); return; }
+  const client = {
+    id: uid(), name,
+    company: document.getElementById('nc-company').value.trim(),
+    phone: document.getElementById('nc-phone').value.trim(),
+    email: document.getElementById('nc-email').value.trim(),
+    industry: document.getElementById('nc-industry').value,
+    notes: document.getElementById('nc-notes').value.trim(),
+    createdAt: new Date().toISOString(),
+    timeline: [{ type:'created', label:'Client added', body:document.getElementById('nc-notes').value.trim().slice(0,100), ts:new Date().toISOString() }],
+  };
+  state.clients.unshift(client);
+  save(); updateBadges(); closeModal('new-client-modal');
+  ['nc-name','nc-company','nc-phone','nc-email','nc-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('nc-industry').value='';
+  renderClients(); renderProposalsClientList();
+  logActivity('👤','Client added',`<strong>${name}</strong>${client.company?' · '+client.company:''}`);
+  toast(`Client "${name}" added ✓`);
+}
+
+function renderClients() {
+  const list = document.getElementById('clients-list');
+  if (!state.clients.length) { list.innerHTML=`<div style="padding:20px 16px;font-size:12px;color:var(--text-muted)">No clients yet. Click ＋ to add.</div>`; return; }
+  list.innerHTML = state.clients.map(c=>`
+    <div class="client-item ${c.id===state.activeClientId?'active':''}" onclick="selectClient('${c.id}')">
+      <div class="client-item-name">${c.name}</div>
+      <div class="client-item-meta">${c.company||'—'} · ${c.industry||'No industry'}</div>
+    </div>`).join('');
+}
+
+function selectClient(id) {
+  state.activeClientId = id;
+  renderClients(); renderClientDetail(id);
+}
+
+function renderClientDetail(id) {
+  const client = state.clients.find(c=>c.id===id);
+  const el = document.getElementById('client-detail');
+  if (!client) return;
+  const clientProposals = state.proposals.filter(p=>p.clientId===id);
+  const clientSessions  = state.sessions.filter(s=>s.clientId===id);
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;gap:10px;flex-wrap:wrap">
+      <div><h2>${client.name}</h2><p class="sub">${client.company||'No company'} · ${client.industry||'No industry'}</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${client.phone?`<a href="https://wa.me/${client.phone.replace(/\D/g,'')}" target="_blank" class="btn btn-whatsapp btn-sm">💬 WhatsApp</a>`:''}
+        <button class="btn btn-primary btn-sm" onclick="openSessionModal();pickedClientId='${id}';document.getElementById('cpcard-${id}')&&document.getElementById('cpcard-${id}').click()">💬 New session</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteClient('${id}')">Delete</button>
+      </div>
+    </div>
+    <div class="detail-grid">
+      <div><div class="detail-label">WhatsApp</div><div class="detail-value">${client.phone||'—'}</div></div>
+      <div><div class="detail-label">Email</div><div class="detail-value">${client.email?`<a href="mailto:${client.email}">${client.email}</a>`:'—'}</div></div>
+      <div><div class="detail-label">Added</div><div class="detail-value">${new Date(client.createdAt).toLocaleDateString('en-ZA')}</div></div>
+      <div><div class="detail-label">Sessions / Proposals</div><div class="detail-value">${clientSessions.length} sessions · ${clientProposals.length} proposals</div></div>
+    </div>
+    ${client.notes?`<div class="card"><h3>Notes</h3><p style="font-size:13px;color:var(--text-muted);white-space:pre-wrap">${escHtml(client.notes)}</p></div>`:''}
+    ${clientProposals.length?`
+    <div class="card">
+      <h3>Proposals (${clientProposals.length})</h3>
+      ${clientProposals.map(p=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-size:13px;font-weight:600">${p.title}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${new Date(p.createdAt).toLocaleDateString('en-ZA')} · <span class="status-pill ${p.status}">${statusEmoji(p.status)} ${p.status}</span></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="gotoProposal('${p.clientId}','${p.id}')">View →</button>
+        </div>`).join('')}
+    </div>`:''}
+    <div style="margin-top:20px">
+      <h3 style="margin-bottom:14px">Interaction Timeline</h3>
+      ${!(client.timeline||[]).length?'<p style="font-size:13px;color:var(--text-muted)">No interactions yet.</p>':''}
+      ${(client.timeline||[]).slice().reverse().map(e=>`
+        <div class="timeline-entry">
+          <div class="tl-dot">${e.type==='proposal'?'📄':e.type==='message'?'💬':e.type==='note'?'📝':'👤'}</div>
+          <div class="tl-content">
+            <div class="tl-label">${e.label}</div>
+            <div class="tl-time">${relTime(e.ts)}</div>
+            ${e.body?`<div class="tl-body">${escHtml(e.body)}</div>`:''}
+          </div>
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+      <h3 style="margin-bottom:10px">Add note</h3>
+      <div class="field"><textarea id="client-note-input" placeholder="Add a note, follow-up, or update…" style="min-height:60px"></textarea></div>
+      <button class="btn btn-primary btn-sm" onclick="addClientNote('${id}')">Save note</button>
+    </div>`;
+}
+
+function addClientNote(clientId) {
+  const client = state.clients.find(c=>c.id===clientId);
+  const note = document.getElementById('client-note-input').value.trim();
+  if (!note||!client) return;
+  if (!client.timeline) client.timeline=[];
+  client.timeline.push({ type:'note', label:'Note added', body:note, ts:new Date().toISOString() });
+  save(); renderClientDetail(clientId);
+  logActivity('📝','Note added',`for <strong>${client.name}</strong>`);
+  toast('Note saved ✓');
+}
+
+function deleteClient(id) {
+  if (!confirm('Delete this client and all their data? This cannot be undone.')) return;
+  const name = state.clients.find(c=>c.id===id)?.name;
+  state.clients = state.clients.filter(c=>c.id!==id);
+  state.proposals = state.proposals.filter(p=>p.clientId!==id);
+  state.sessions = state.sessions.filter(s=>s.clientId!==id);
+  save(); updateBadges(); state.activeClientId=null;
+  renderClients(); renderProposalsClientList();
+  document.getElementById('client-detail').innerHTML=`<div class="empty-state"><div class="icon">👤</div><strong>Select a client</strong></div>`;
+  logActivity('🗑','Client deleted',`<strong>${name}</strong>`);
+}
+
+function gotoProposal(clientId, proposalId) {
+  switchTab('proposals', document.querySelector('[data-tab="proposals"]'));
+  state.proposalsClientId = clientId;
+  setTimeout(() => { renderProposalsTab(); openProposalDetailById(proposalId); }, 80);
+}
+
+// ════════════════════════════════════════
+// PROPOSALS TAB
+// ════════════════════════════════════════
+function renderProposalsTab() {
+  renderProposalsClientList();
+  if (state.proposalsClientId) renderProposalsForClient(state.proposalsClientId);
+}
+
+function renderProposalsClientList() {
+  const el = document.getElementById('proposals-client-list');
+  if (!state.clients.length) { el.innerHTML=`<div style="padding:20px 16px;font-size:12px;color:var(--text-muted)">No clients yet.</div>`; return; }
+  el.innerHTML = state.clients.map(c=>{
+    const count = state.proposals.filter(p=>p.clientId===c.id).length;
+    return `<div class="prop-client-item ${c.id===state.proposalsClientId?'active':''}" onclick="selectProposalsClient('${c.id}')">
+      <div class="prop-client-name">${c.name}</div>
+      <div class="prop-client-count">${count} proposal${count!==1?'s':''}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectProposalsClient(id) {
+  state.proposalsClientId = id;
+  renderProposalsClientList();
+  renderProposalsForClient(id);
+}
+
+function renderProposalsForClient(clientId) {
+  const client = state.clients.find(c=>c.id===clientId);
+  const proposals = state.proposals.filter(p=>p.clientId===clientId);
+  const titleEl = document.getElementById('proposals-right-title');
+  const btn = document.getElementById('new-proposal-btn');
+  const grid = document.getElementById('proposals-grid');
+  const empty = document.getElementById('proposals-empty-state');
+
+  titleEl.textContent = client ? `${client.name}'s Proposals` : 'Proposals';
+  btn.style.display = 'inline-flex';
+
+  if (!proposals.length) {
+    grid.innerHTML = '';
+    empty.innerHTML = `<div class="icon">📄</div><strong>No proposals yet</strong><p>Start a chat session and click "Generate proposal", or click ＋ above.</p>`;
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.innerHTML = proposals.map(p=>`
+    <div class="proposal-card" onclick="openProposalDetailById('${p.id}')">
+      <div class="proposal-card-title">${p.title}</div>
+      <div class="proposal-card-meta">${new Date(p.createdAt).toLocaleDateString('en-ZA')} · v${p.version}</div>
+      <div class="proposal-card-footer">
+        <span class="status-pill ${p.status}">${statusEmoji(p.status)} ${p.status}</span>
+        <span style="font-size:11px;color:var(--text-muted)">${relTime(p.updatedAt||p.createdAt)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function newProposalFromTab() {
+  if (!state.proposalsClientId) { toast('Select a client first'); return; }
+  openSessionModal();
+  pickClient(state.proposalsClientId);
+}
+
+// ════════════════════════════════════════
+// PROPOSAL DETAIL
+// ════════════════════════════════════════
+function openProposalDetailById(id) {
+  state.activeProposalId = id;
+  const p = state.proposals.find(p=>p.id===id);
+  if (!p) return;
+
+  document.getElementById('pd-title').textContent = p.title;
+  document.getElementById('pd-meta').textContent = `${p.clientName} · ${new Date(p.createdAt).toLocaleDateString('en-ZA')} · Version ${p.version}`;
+  document.getElementById('pd-rendered').innerHTML = renderProposalMarkdown(p.body);
+  document.getElementById('pd-raw').value = p.body;
+  document.getElementById('pd-raw').classList.remove('visible');
+  document.getElementById('pd-rendered').style.display = 'block';
+  document.getElementById('pd-toggle-raw').textContent = '✏ Edit raw';
+  renderStatusHistory(p);
+  document.getElementById('proposal-detail-panel').classList.add('open');
+}
+
+function closeProposalDetail() {
+  document.getElementById('proposal-detail-panel').classList.remove('open');
+  state.activeProposalId = null;
+  renderProposalsForClient(state.proposalsClientId);
+}
+
+function toggleRawEdit() {
+  const raw = document.getElementById('pd-raw');
+  const rendered = document.getElementById('pd-rendered');
+  const btn = document.getElementById('pd-toggle-raw');
+  const showingRaw = raw.classList.contains('visible');
+  if (showingRaw) {
+    raw.classList.remove('visible');
+    rendered.style.display = 'block';
+    btn.textContent = '✏ Edit raw';
+  } else {
+    raw.classList.add('visible');
+    rendered.style.display = 'none';
+    btn.textContent = '👁 Preview';
+  }
+}
+
+function rawEdited() {
+  if (!state.activeProposalId) return;
+  const p = state.proposals.find(p=>p.id===state.activeProposalId);
+  if (!p) return;
+  p.body = document.getElementById('pd-raw').value;
+  p.updatedAt = new Date().toISOString();
+  p.version = Math.round((p.version + 0.1) * 10) / 10;
+  document.getElementById('pd-rendered').innerHTML = renderProposalMarkdown(p.body);
+  document.getElementById('pd-meta').textContent = `${p.clientName} · ${new Date(p.createdAt).toLocaleDateString('en-ZA')} · Version ${p.version}`;
+  save();
+}
+
+function copyProposal() {
+  const p = state.proposals.find(p=>p.id===state.activeProposalId);
+  if (!p) return;
+  navigator.clipboard.writeText(p.body);
+  toast('Proposal copied to clipboard ✓');
+}
+
+function printProposal() {
+  const p = state.proposals.find(p=>p.id===state.activeProposalId);
+  if (!p) return;
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><title>${escHtml(p.title)}</title><style>
+    body{font-family:sans-serif;font-size:14px;line-height:1.7;padding:40px;max-width:760px;margin:0 auto;color:#222}
+    h1{font-size:22px} h2{font-size:16px;margin-top:24px;border-bottom:1px solid #ddd;padding-bottom:6px} h3{font-size:14px}
+    table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px} td,th{padding:8px 10px;border-bottom:1px solid #ddd;text-align:left}
+  </style></head><body>${renderProposalMarkdown(p.body)}</body></html>`);
+  w.document.close();
+  w.print();
+}
+
+function whatsappProposal() {
+  const p = state.proposals.find(p=>p.id===state.activeProposalId);
+  if (!p) return;
+  const client = state.clients.find(c=>c.id===p.clientId);
+  const phone = client && client.phone ? client.phone.replace(/\D/g,'') : '';
+  const text = encodeURIComponent(`Hi ${p.clientName}, here's the proposal for "${p.title}" — I'll send the full document, but here's a quick summary. Let me know if you have any questions!`);
+  const url = phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
+  window.open(url, '_blank');
+  logActivity('💬','Proposal shared via WhatsApp',`<strong>${p.title}</strong>`);
+}
+
+function deleteProposal() {
+  if (!confirm('Delete this proposal? This cannot be undone.')) return;
+  const p = state.proposals.find(p=>p.id===state.activeProposalId);
+  state.proposals = state.proposals.filter(p=>p.id!==state.activeProposalId);
+  save(); updateBadges();
+  if (p) logActivity('🗑','Proposal deleted',`<strong>${p.title}</strong>`);
+  closeProposalDetail();
+}
+
+// ════════════════════════════════════════
+// STATUS
+// ════════════════════════════════════════
+const STATUS_OPTIONS = [
+  { key:'draft',    label:'Draft',    emoji:'✏' },
+  { key:'sent',     label:'Sent',     emoji:'📤' },
+  { key:'accepted', label:'Accepted', emoji:'✅' },
+  { key:'declined', label:'Declined', emoji:'❌' },
+];
+
+function statusEmoji(status) {
+  const s = STATUS_OPTIONS.find(o=>o.key===status);
+  return s ? s.emoji : '●';
+}
+
+function openStatusModal() {
+  const p = state.proposals.find(p=>p.id===state.activeProposalId);
+  if (!p) return;
+  document.getElementById('status-options').innerHTML = STATUS_OPTIONS.map(o=>`
+    <button class="btn ${o.key===p.status?'btn-primary':'btn-ghost'} btn-sm" onclick="setProposalStatus('${o.key}')">${o.emoji} ${o.label}</button>
+  `).join('');
+  openModal('status-modal');
+}
+
+function setProposalStatus(status) {
+  const p = state.proposals.find(p=>p.id===state.activeProposalId);
+  if (!p) return;
+  p.status = status;
+  p.updatedAt = new Date().toISOString();
+  if (!p.statusHistory) p.statusHistory = [];
+  p.statusHistory.push({ status, ts: new Date().toISOString(), note: 'Status updated' });
+  save(); updateBadges();
+  closeModal('status-modal');
+  renderStatusHistory(p);
+  document.getElementById('pd-meta').textContent = `${p.clientName} · ${new Date(p.createdAt).toLocaleDateString('en-ZA')} · Version ${p.version}`;
+  logActivity(statusEmoji(status), 'Proposal status updated', `<strong>${p.title}</strong> → ${status}`);
+  toast(`Marked as ${status} ✓`);
+}
+
+function renderStatusHistory(p) {
+  const el = document.getElementById('pd-status-history');
+  const history = p.statusHistory || [];
+  el.innerHTML = history.slice().reverse().map(h=>`
+    <div class="sh-item">
+      <div class="sh-dot"></div>
+      <div class="sh-text"><strong>${statusEmoji(h.status)} ${h.status}</strong> — ${relTime(h.ts)}${h.note?' · '+escHtml(h.note):''}</div>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════════════
+// ACTIVITY
+// ════════════════════════════════════════
+function logActivity(icon, title, detail) {
+  state.activity.unshift({ icon, title, detail, ts: new Date().toISOString() });
+  save();
+}
+
+function renderActivity() {
+  const feed = document.getElementById('activity-feed');
+  const empty = document.getElementById('activity-empty');
+  if (state.activity.length === 0) {
+    feed.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  feed.innerHTML = state.activity.slice(0, 80).map(a => `
+    <div class="activity-item">
+      <div class="act-icon">${a.icon}</div>
+      <div class="act-content">
+        <div class="act-title">${a.title} ${a.detail ? '— ' + a.detail : ''}</div>
+        <div class="act-time">${relTime(a.ts)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════════════
+// STACK
+// ════════════════════════════════════════
+function renderStack() {
+  document.getElementById('stack-grid').innerHTML = STACK.map(s => `
+    <div class="stack-card">
+      <div class="stack-card-title"><span class="stack-icon">${s.icon}</span>${s.title}</div>
+      <div class="stack-card-desc">${s.desc}</div>
+      <div class="stack-tags">
+        ${s.tags.map(t => `<span class="tag">${t}</span>`).join('')}
+      </div>
+      <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">
+        <span class="rate-chip">💰 ${s.rate}</span>
+      </div>
+      <div style="margin-top:6px;font-size:11px;color:var(--text-muted)">${s.typical}</div>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════════════
+// BADGES & UTILS
+// ════════════════════════════════════════
+function updateBadges() {
+  document.getElementById('client-count-badge').textContent = state.clients.length;
+  document.getElementById('proposal-count-badge').textContent = state.proposals.length;
+}
+
+function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function relTime(ts) {
+  if (!ts) return '';
+  const diff = Date.now() - new Date(ts).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
+function shortTime(ts) {
+  if (!ts) return '';
+  return new Date(ts).toLocaleTimeString('en-ZA', { hour:'2-digit', minute:'2-digit' });
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// ════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════
+load();
+updateApiBadge();
+updateBadges();
+renderChatList();
+renderStack();
+
+if (!state.apiKey) {
+  setTimeout(() => openModal('api-modal'), 600);
+}
+</script>
+</body>
+</html>
+      <div class="proposal-card-meta">${new Date(p.createdAt).toLocaleDateString('en-ZA')}
