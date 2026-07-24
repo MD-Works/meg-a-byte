@@ -436,6 +436,16 @@
   </div>
 </div>
 
+<!-- Proposal language selector modal -->
+<div class="modal-overlay" id="proposal-lang-modal">
+  <div class="modal" style="width:380px">
+    <h3>🌍 Proposal Language</h3>
+    <p class="sub" id="proposal-lang-msg">The conversation was in another language. Which language should the proposal be written in?</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px" id="proposal-lang-options"></div>
+    <button class="btn btn-ghost btn-sm" onclick="closeModal('proposal-lang-modal')">Cancel</button>
+  </div>
+</div>
+
 <!-- Header -->
 <header>
   <div class="logo">
@@ -590,6 +600,32 @@
 
 <script>
 // ════════════════════════════════════════
+// ⚙️  PRICING CONFIG — edit this section
+// ════════════════════════════════════════
+// LABOUR_FACTOR: a number between 0 and 1.
+//   1.0 = full MD Works rates (default for larger markets)
+//   0.7 = 30% reduction (mid-tier / regional clients)
+//   0.5 = 50% reduction (small town / budget-sensitive markets)
+// This scales ALL labour cost estimates in proposals.
+// Base rates in the STACK array stay unchanged — only
+// the figures sent to the AI and shown in the Stack tab are adjusted.
+
+const LABOUR_FACTOR = 0.8; // ← change this number
+
+// Derived labels shown in the UI and sent to Meg
+const MARKET_LABEL  = LABOUR_FACTOR === 1
+  ? 'Standard market rates'
+  : `Adjusted rates (×${LABOUR_FACTOR} — ${Math.round((1-LABOUR_FACTOR)*100)}% reduction)`;
+
+// Helper: apply factor to a ZAR string like "R 350–450/hr"
+function applyFactor(str) {
+  return str.replace(/R\s?(\d[\d,]*)/g, (_, n) => {
+    const val = parseInt(n.replace(/,/g,''));
+    return 'R ' + Math.round(val * LABOUR_FACTOR).toLocaleString('en-ZA');
+  });
+}
+
+// ════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════
 let state = {
@@ -625,7 +661,10 @@ Your personality: warm, professional, and occasionally playful with a light tech
 Your role: have a natural conversation with a potential client to understand their concept, then help scope and price a real project using MD Works' tech stack.
 
 == MD WORKS TECH STACK (use this to scope and price) ==
-${STACK.map(s=>`• ${s.title}: ${s.desc} | Typical: ${s.typical}`).join('\n')}
+${STACK.map(s=>`• ${s.title}: ${s.desc} | Rate: ${applyFactor(s.rate)} | Typical: ${applyFactor(s.typical)}`).join('\n')}
+
+ACTIVE PRICING: Market adjustment factor ×${LABOUR_FACTOR} is applied (${MARKET_LABEL}).
+All figures above already reflect this adjustment. Quote ONLY these adjusted amounts in proposals — never base rates.
 
 == PRICING PHILOSOPHY ==
 - All prices in ZAR. Fixed-price per project, not hourly.
@@ -645,6 +684,7 @@ ${STACK.map(s=>`• ${s.title}: ${s.desc} | Typical: ${s.typical}`).join('\n')}
 - Be warm, conversational, professional — not robotic.
 - When you have enough info, say something like: "I think I've got enough bytes to compile a proper proposal — want me to generate it?" (keep Meg's voice, vary the phrasing naturally)
 - Never give specific prices until you have the full picture.
+- LANGUAGE: Detect the language the client writes in and always respond in that same language. If they write in Afrikaans, respond in Afrikaans. If English, respond in English. If they switch mid-conversation, switch with them naturally.
 
 Current client: ${client.name}${client.company ? ' from ' + client.company : ''}${client.industry ? ' (' + client.industry + ')' : ''}.${client.notes ? '\nInitial notes: ' + client.notes : ''}`;
 }
@@ -925,12 +965,89 @@ function updateStage(stage) {
   save(); renderChatList();
 }
 
+// Language detection — samples last 6 client messages, asks a fast model to identify
+const LANG_NAMES = {
+  en: 'English', af: 'Afrikaans', zu: 'Zulu', xh: 'Xhosa',
+  st: 'Sesotho', tn: 'Setswana', ts: 'Xitsonga', ve: 'Tshivenda',
+  nr: 'isiNdebele', ss: 'siSwati', pt: 'Portuguese', fr: 'French',
+  de: 'German', es: 'Spanish', other: 'Other',
+};
+
+async function detectConversationLanguage(session) {
+  const clientMessages = session.messages
+    .filter(m => m.role === 'user')
+    .slice(-6)
+    .map(m => m.content)
+    .join('\n');
+  if (!clientMessages.trim()) return 'en';
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.apiKey}` },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          { role: 'system', content: 'You are a language detector. Reply with ONLY a 2-letter ISO 639-1 language code (e.g. en, af, zu, xh, st, tn, ts, ve, pt, fr, de, es). Nothing else.' },
+          { role: 'user', content: `What language is this text written in?\n\n${clientMessages}` }
+        ],
+        temperature: 0, max_tokens: 5,
+      })
+    });
+    const data = await res.json();
+    const code = data.choices[0].message.content.trim().toLowerCase().slice(0,2);
+    return code || 'en';
+  } catch {
+    return 'en';
+  }
+}
+
+let _pendingProposalLang = null;
+
 async function generateProposal() {
   if (!state.activeSessionId) return;
   if (!state.apiKey) { openModal('api-modal'); return; }
   const session = state.sessions.find(s=>s.id===state.activeSessionId);
   if (!session) return;
 
+  // Detect language first — show spinner while detecting
+  const typing = document.getElementById('typing-indicator');
+  typing.classList.add('visible');
+  const detectedCode = await detectConversationLanguage(session);
+  typing.classList.remove('visible');
+
+  if (detectedCode === 'en') {
+    // English — no modal, generate immediately
+    await _runProposalGeneration(session, 'English');
+  } else {
+    // Non-English — ask before generating
+    const detectedName = LANG_NAMES[detectedCode] || detectedCode.toUpperCase();
+    _pendingProposalLang = { session, detectedName };
+
+    document.getElementById('proposal-lang-msg').textContent =
+      `This conversation appears to be in ${detectedName}. Which language should the proposal be written in?`;
+
+    document.getElementById('proposal-lang-options').innerHTML = `
+      <button class="btn btn-primary" onclick="confirmProposalLang('${detectedName}')">
+        🌍 ${detectedName} <span style="opacity:0.7;font-size:11px;margin-left:4px">— match the conversation</span>
+      </button>
+      <button class="btn btn-ghost" onclick="confirmProposalLang('English')">
+        🇬🇧 English <span style="opacity:0.7;font-size:11px;margin-left:4px">— always professional</span>
+      </button>`;
+
+    openModal('proposal-lang-modal');
+  }
+}
+
+function confirmProposalLang(language) {
+  closeModal('proposal-lang-modal');
+  if (!_pendingProposalLang) return;
+  const { session } = _pendingProposalLang;
+  _pendingProposalLang = null;
+  _runProposalGeneration(session, language);
+}
+
+async function _runProposalGeneration(session, language) {
   document.getElementById('typing-indicator').classList.add('visible');
   addMessage(state.activeSessionId, 'assistant', '📄 Generating proposal — using the larger model, this may take a moment…');
 
@@ -969,7 +1086,9 @@ Date: ${new Date().toLocaleDateString('en-ZA')}
 ## Next Steps
 [What the client does to proceed]
 
-Use real ZAR figures based on MD Works rates. Keep it professional but human.`;
+Use real ZAR figures based on MD Works rates. Keep it professional but human.
+
+LANGUAGE: Write this entire proposal in ${language}. Every heading, sentence, and table label must be in ${language}.`;
 
   try {
     const client = state.clients.find(c=>c.id===session.clientId) || { name:session.clientName, company:session.clientCompany, industry:session.clientIndustry };
@@ -992,7 +1111,7 @@ Use real ZAR figures based on MD Works rates. Keep it professional but human.`;
     const proposal = {
       id: uid(), sessionId: session.id, clientId: session.clientId,
       clientName: session.clientName, title, body: proposalText,
-      version: 1, status: 'draft',
+      language, version: 1, status: 'draft',
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       statusHistory: [{ status:'draft', ts: new Date().toISOString(), note:'Created' }],
     };
@@ -1001,11 +1120,11 @@ Use real ZAR figures based on MD Works rates. Keep it professional but human.`;
     save(); updateBadges(); renderChatList();
 
     if (client.timeline) {
-      client.timeline.push({ type:'proposal', label:'Proposal generated', body:title, ts:new Date().toISOString() });
+      client.timeline.push({ type:'proposal', label:`Proposal generated (${language})`, body:title, ts:new Date().toISOString() });
       save();
     }
-    logActivity('📄','Proposal created',`<strong>${title}</strong> for ${session.clientName}`);
-    addMessage(state.activeSessionId,'assistant',`✅ Proposal created: "${title}"\n\nYou can view, edit, and send it from the Proposals tab.`);
+    logActivity('📄','Proposal created',`<strong>${title}</strong> · ${language}`);
+    addMessage(state.activeSessionId,'assistant',`✅ Proposal created in ${language}: "${title}"\n\nYou can view, edit, and send it from the Proposals tab.`);
   } catch(err) {
     addMessage(state.activeSessionId,'assistant',`⚠ Could not generate proposal: ${err.message}`);
   } finally {
@@ -1076,7 +1195,7 @@ function renderClientDetail(id) {
       <div><h2>${client.name}</h2><p class="sub">${client.company||'No company'} · ${client.industry||'No industry'}</p></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${client.phone?`<a href="https://wa.me/${client.phone.replace(/\D/g,'')}" target="_blank" class="btn btn-whatsapp btn-sm">💬 WhatsApp</a>`:''}
-        <button class="btn btn-primary btn-sm" onclick="openSessionModal();pickedClientId='${id}';document.getElementById('cpcard-${id}')&&document.getElementById('cpcard-${id}').click()">💬 New session</button>
+        <button class="btn btn-primary btn-sm" onclick="startSessionForClient('${id}')">💬 New session</button>
         <button class="btn btn-danger btn-sm" onclick="deleteClient('${id}')">Delete</button>
       </div>
     </div>
@@ -1128,6 +1247,12 @@ function addClientNote(clientId) {
   save(); renderClientDetail(clientId);
   logActivity('📝','Note added',`for <strong>${client.name}</strong>`);
   toast('Note saved ✓');
+}
+
+function startSessionForClient(id) {
+  openSessionModal();
+  // Wait for the picker grid to be populated before selecting
+  setTimeout(() => pickClient(id), 50);
 }
 
 function deleteClient(id) {
@@ -1207,7 +1332,8 @@ function renderProposalsForClient(clientId) {
 function newProposalFromTab() {
   if (!state.proposalsClientId) { toast('Select a client first'); return; }
   openSessionModal();
-  pickClient(state.proposalsClientId);
+  // Wait for the picker grid to render before selecting the client card
+  setTimeout(() => pickClient(state.proposalsClientId), 50);
 }
 
 // ════════════════════════════════════════
@@ -1232,7 +1358,8 @@ function openProposalDetailById(id) {
 function closeProposalDetail() {
   document.getElementById('proposal-detail-panel').classList.remove('open');
   state.activeProposalId = null;
-  renderProposalsForClient(state.proposalsClientId);
+  if (state.proposalsClientId) renderProposalsForClient(state.proposalsClientId);
+  else renderProposalsClientList();
 }
 
 function toggleRawEdit() {
@@ -1251,16 +1378,22 @@ function toggleRawEdit() {
   }
 }
 
+let _rawEditTimer = null;
 function rawEdited() {
   if (!state.activeProposalId) return;
   const p = state.proposals.find(p=>p.id===state.activeProposalId);
   if (!p) return;
   p.body = document.getElementById('pd-raw').value;
-  p.updatedAt = new Date().toISOString();
-  p.version = Math.round((p.version + 0.1) * 10) / 10;
+  // Update preview immediately without version bump
   document.getElementById('pd-rendered').innerHTML = renderProposalMarkdown(p.body);
-  document.getElementById('pd-meta').textContent = `${p.clientName} · ${new Date(p.createdAt).toLocaleDateString('en-ZA')} · Version ${p.version}`;
-  save();
+  // Debounce: only bump version + save after 1.5s of no typing
+  clearTimeout(_rawEditTimer);
+  _rawEditTimer = setTimeout(() => {
+    p.updatedAt = new Date().toISOString();
+    p.version = Math.round((p.version + 0.1) * 10) / 10;
+    document.getElementById('pd-meta').textContent = `${p.clientName} · ${new Date(p.createdAt).toLocaleDateString('en-ZA')} · Version ${p.version}`;
+    save();
+  }, 1500);
 }
 
 function copyProposal() {
@@ -1385,19 +1518,44 @@ function renderActivity() {
 // STACK
 // ════════════════════════════════════════
 function renderStack() {
-  document.getElementById('stack-grid').innerHTML = STACK.map(s => `
+  const factorBanner = LABOUR_FACTOR < 1
+    ? `<div style="background:rgba(246,173,85,0.1);border:1px solid rgba(246,173,85,0.3);border-radius:var(--radius);padding:10px 14px;margin-bottom:18px;font-size:13px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">⚙️</span>
+        <div>
+          <strong style="color:var(--warn)">Market pricing active — ×${LABOUR_FACTOR} factor</strong>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${MARKET_LABEL}. Edit <code style="background:var(--surface2);padding:1px 5px;border-radius:4px">LABOUR_FACTOR</code> at the top of the script to change.</div>
+        </div>
+      </div>`
+    : `<div style="background:rgba(104,211,145,0.08);border:1px solid rgba(104,211,145,0.2);border-radius:var(--radius);padding:10px 14px;margin-bottom:18px;font-size:13px;color:var(--text-muted)">
+        ✅ Full standard rates active (LABOUR_FACTOR = 1.0)
+      </div>`;
+
+  // Remove any previously inserted banner to avoid duplicates on re-render
+  const existing = document.getElementById('stack-factor-banner');
+  if (existing) existing.remove();
+  const bannerEl = document.createElement('div');
+  bannerEl.id = 'stack-factor-banner';
+  bannerEl.innerHTML = factorBanner;
+  const container = document.getElementById('stack-grid');
+  container.parentNode.insertBefore(bannerEl, container);
+  container.innerHTML = STACK.map(s => {
+    const adjustedRate    = applyFactor(s.rate);
+    const adjustedTypical = applyFactor(s.typical);
+    const rateChanged     = adjustedRate !== s.rate;
+    return `
     <div class="stack-card">
       <div class="stack-card-title"><span class="stack-icon">${s.icon}</span>${s.title}</div>
       <div class="stack-card-desc">${s.desc}</div>
       <div class="stack-tags">
         ${s.tags.map(t => `<span class="tag">${t}</span>`).join('')}
       </div>
-      <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">
-        <span class="rate-chip">💰 ${s.rate}</span>
+      <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+        <span class="rate-chip">💰 ${adjustedRate}</span>
+        ${rateChanged ? `<span style="font-size:11px;color:var(--text-muted);text-decoration:line-through">${s.rate}</span>` : ''}
       </div>
-      <div style="margin-top:6px;font-size:11px;color:var(--text-muted)">${s.typical}</div>
-    </div>
-  `).join('');
+      <div style="margin-top:6px;font-size:11px;color:var(--text-muted)">${adjustedTypical}</div>
+      ${rateChanged && s.typical !== adjustedTypical ? `<div style="font-size:10px;color:var(--border);text-decoration:line-through;margin-top:1px">${s.typical}</div>` : ''}
+    </div>`}).join('');
 }
 
 // ════════════════════════════════════════
@@ -1451,4 +1609,3 @@ if (!state.apiKey) {
 </script>
 </body>
 </html>
-      <div class="proposal-card-meta">${new Date(p.createdAt).toLocaleDateString('en-ZA')}
