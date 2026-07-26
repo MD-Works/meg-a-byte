@@ -2,8 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Meg A. Byte — MD Works Assistant</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1117">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Meg A. Byte">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
   :root {
     --bg:        #0f1117;
@@ -31,10 +41,13 @@
   /* ── Header ── */
   header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0 24px; height: 52px;
+    padding: env(safe-area-inset-top) 24px 0; height: calc(52px + env(safe-area-inset-top));
     border-bottom: 1px solid var(--border);
-    background: var(--surface); flex-shrink: 0;
+    background: var(--surface); flex-shrink: 0; gap: 8px;
   }
+  .header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  #install-btn { display: none; }
+  #install-btn.visible { display: inline-flex; }
   .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
   .logo-mark {
     width: 28px; height: 28px;
@@ -54,11 +67,14 @@
   nav {
     display: flex; gap: 2px; padding: 0 24px;
     background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
+    overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
   }
+  nav::-webkit-scrollbar { display: none; }
   .tab-btn {
     padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted);
     background: none; border: none; border-bottom: 2px solid transparent;
     cursor: pointer; transition: color 0.15s, border-color 0.15s; white-space: nowrap;
+    flex-shrink: 0;
   }
   .tab-btn:hover { color: var(--text); }
   .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
@@ -117,6 +133,9 @@
   .tag.danger  { background: rgba(245,101,101,0.12); color: var(--danger);  border-color: rgba(245,101,101,0.3); }
   .tag.info    { background: rgba(79,209,197,0.12);  color: var(--accent2); border-color: rgba(79,209,197,0.3);  }
 
+  .mobile-back-btn { display: none; }
+  .bottom-nav { display: none; }
+
   .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
   .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
   .empty-state p { font-size: 13px; margin-top: 6px; }
@@ -162,6 +181,7 @@
     text-transform: uppercase; letter-spacing: 0.05em;
     display: flex; justify-content: space-between; align-items: center;
   }
+  .mobile-home-header { display: none; }
   .chat-list { overflow-y: auto; flex: 1; }
   .chat-list-item {
     padding: 10px 14px; cursor: pointer;
@@ -230,7 +250,7 @@
   .client-item-name { font-weight: 600; font-size: 13px; }
   .client-item-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
   .client-detail { flex: 1; overflow-y: auto; padding: 24px; }
-  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 12px; margin-bottom: 20px; }
   .detail-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
   .detail-value { font-size: 13px; }
   .detail-value a { color: var(--accent); text-decoration: none; }
@@ -255,7 +275,7 @@
 
   .proposals-right { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
   .proposals-right-header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-  .proposals-right-header h3 { margin: 0; font-size: 14px; font-weight: 700; }
+  .proposals-right-header h3 { margin: 0; font-size: 14px; font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .proposals-list-scroll { flex: 1; overflow-y: auto; padding: 20px; }
 
   .proposal-card {
@@ -356,8 +376,62 @@
   #toast.show { transform: translateX(-50%) translateY(0); }
 
   @media (max-width: 700px) {
-    .clients-layout, .proposals-layout { grid-template-columns: 1fr; }
-    .clients-list-panel, .proposals-client-panel { display: none; }
+    header { padding-left: 14px; padding-right: 14px; }
+    .logo-sub { display: none; }
+    .groq-badge { font-size: 10px; padding: 3px 7px; }
+    .scroll { padding: 16px; }
+    input, textarea, select { font-size: 16px; } /* prevents auto-zoom on focus */
+
+    /* Top tabs replaced by bottom tab bar */
+    nav { display: none; }
+    .bottom-nav {
+      display: flex; flex-shrink: 0;
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 4px 2px calc(4px + env(safe-area-inset-bottom));
+    }
+    body.mobile-focused .bottom-nav { display: none; }
+    .bottom-tab {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 6px 2px; background: none; border: none; color: var(--text-muted);
+      font-size: 10px; font-weight: 600; cursor: pointer; position: relative;
+    }
+    .bottom-tab .bt-icon { font-size: 19px; line-height: 1; }
+    .bottom-tab.active { color: var(--accent); }
+    .bottom-tab .bt-badge {
+      position: absolute; top: 0; right: calc(50% - 22px);
+      min-width: 14px; height: 14px; padding: 0 3px; border-radius: 20px;
+      background: var(--accent); color: #fff; font-size: 9px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ── Chat tab: merged Home screen (greeting + recent sessions) <-> full-screen chat ── */
+    #tab-chat { position: relative; }
+    .chat-sidebar { width: 100%; }
+    #tab-chat.session-open .chat-sidebar { display: none; }
+    #tab-chat:not(.session-open) .chat-main { display: none !important; }
+    .chat-input-row { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+    .mobile-home-header { display: block; padding: 22px 16px; border-bottom: 1px solid var(--border); text-align: center; }
+    .mobile-home-header .mhh-icon { font-size: 36px; margin-bottom: 8px; }
+    .mobile-home-header .mhh-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+    .mobile-home-header .mhh-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5; }
+
+    /* ── Clients tab: list <-> detail ── */
+    .clients-layout { grid-template-columns: 1fr; position: relative; }
+    .client-detail { display: none; }
+    .clients-layout.detail-open .clients-list-panel { display: none; }
+    .clients-layout.detail-open .client-detail { display: block; }
+
+    /* ── Proposals tab: client list <-> proposals list ── */
+    .proposals-layout { grid-template-columns: 1fr; }
+    .proposals-right { display: none; }
+    .proposals-layout.detail-open .proposals-client-panel { display: none; }
+    .proposals-layout.detail-open .proposals-right { display: flex; }
+
+    .mobile-back-btn { display: inline-flex; }
+
+    .modal { padding: 20px; }
+    .pd-header { padding: 12px 14px; }
+    .pd-body { padding: 18px; }
   }
 </style>
 </head>
@@ -451,18 +525,21 @@
   <div class="logo">
     <div class="logo-mark">M</div>
     <span>Meg A. Byte</span>
-    <span style="font-weight:400;color:var(--text-muted);font-size:12px;margin-left:2px">by MD Works</span>
+    <span class="logo-sub" style="font-weight:400;color:var(--text-muted);font-size:12px;margin-left:2px">by MD Works</span>
   </div>
-  <button class="groq-badge" id="api-badge" onclick="openModal('api-modal')">⚡ Set Groq key</button>
+  <div class="header-actions">
+    <button class="btn btn-ghost btn-sm" id="install-btn" onclick="installApp()">⬇ Install</button>
+    <button class="groq-badge" id="api-badge" onclick="openModal('api-modal')">⚡ Set Groq key</button>
+  </div>
 </header>
 
 <!-- Nav -->
 <nav>
-  <button class="tab-btn active" data-tab="chat"      onclick="switchTab('chat',this)">💬 Assistant</button>
-  <button class="tab-btn"        data-tab="clients"   onclick="switchTab('clients',this)">👤 Clients <span class="badge" id="client-count-badge">0</span></button>
-  <button class="tab-btn"        data-tab="proposals" onclick="switchTab('proposals',this)">📄 Proposals <span class="badge" id="proposal-count-badge">0</span></button>
-  <button class="tab-btn"        data-tab="activity"  onclick="switchTab('activity',this)">📋 Activity</button>
-  <button class="tab-btn"        data-tab="stack"     onclick="switchTab('stack',this)">🛠 Stack & Rates</button>
+  <button class="tab-btn active" data-tab="chat"      onclick="switchTab('chat')">💬 Assistant</button>
+  <button class="tab-btn"        data-tab="clients"   onclick="switchTab('clients')">👤 Clients <span class="badge" id="client-count-badge">0</span></button>
+  <button class="tab-btn"        data-tab="proposals" onclick="switchTab('proposals')">📄 Proposals <span class="badge" id="proposal-count-badge">0</span></button>
+  <button class="tab-btn"        data-tab="activity"  onclick="switchTab('activity')">📋 Activity</button>
+  <button class="tab-btn"        data-tab="stack"     onclick="switchTab('stack')">🛠 Stack & Rates</button>
 </nav>
 
 <main>
@@ -470,6 +547,12 @@
 <!-- ══════════ CHAT TAB ══════════ -->
 <div class="tab-panel active" id="tab-chat">
   <div class="chat-sidebar">
+    <div class="mobile-home-header">
+      <div class="mhh-icon">🤖</div>
+      <div class="mhh-title">Hi, I'm Meg A. Byte</div>
+      <p class="mhh-sub">MD Works' client intake assistant. Start a session and I'll help scope and price the project.</p>
+      <button class="btn btn-primary" style="width:100%" onclick="openSessionModal()">＋ New session</button>
+    </div>
     <div class="chat-sidebar-header">Sessions <button class="btn btn-sm btn-primary" onclick="openSessionModal()">＋</button></div>
     <div class="chat-list" id="chat-list"></div>
   </div>
@@ -482,9 +565,12 @@
     </div>
     <div id="active-chat" style="display:none;flex:1;flex-direction:column;overflow:hidden">
       <div class="chat-topbar">
-        <div>
-          <div class="client-name" id="chat-client-name">—</div>
-          <div class="stage-label" id="chat-stage-label">Intake</div>
+        <div style="display:flex;align-items:center;gap:8px;min-width:0">
+          <button class="btn btn-ghost btn-sm mobile-back-btn" onclick="backToChatList()">←</button>
+          <div style="min-width:0">
+            <div class="client-name" id="chat-client-name">—</div>
+            <div class="stage-label" id="chat-stage-label">Intake</div>
+          </div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-sm btn-ghost" onclick="generateProposal()">📄 Generate proposal</button>
@@ -517,7 +603,7 @@
 
 <!-- ══════════ CLIENTS TAB ══════════ -->
 <div class="tab-panel" id="tab-clients">
-  <div class="clients-layout">
+  <div class="clients-layout" id="clients-layout">
     <div class="clients-list-panel">
       <div class="panel-header">
         <h3>Clients</h3>
@@ -533,7 +619,7 @@
 
 <!-- ══════════ PROPOSALS TAB ══════════ -->
 <div class="tab-panel" id="tab-proposals" style="position:relative">
-  <div class="proposals-layout">
+  <div class="proposals-layout" id="proposals-layout">
     <!-- Left: client list -->
     <div class="proposals-client-panel">
       <div class="panel-header"><h3>Clients</h3></div>
@@ -542,6 +628,7 @@
     <!-- Right: proposals for selected client -->
     <div class="proposals-right">
       <div class="proposals-right-header">
+        <button class="btn btn-ghost btn-sm mobile-back-btn" onclick="backToProposalsClients()">←</button>
         <h3 id="proposals-right-title">Select a client</h3>
         <button class="btn btn-sm btn-primary" id="new-proposal-btn" style="display:none" onclick="newProposalFromTab()">＋ New proposal</button>
       </div>
@@ -597,6 +684,27 @@
 </div>
 
 </main>
+
+<!-- Bottom tab bar — mobile only -->
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="bottom-tab active" data-tab="chat" onclick="switchTab('chat')">
+    <span class="bt-icon">💬</span><span>Home</span>
+  </button>
+  <button class="bottom-tab" data-tab="clients" onclick="switchTab('clients')">
+    <span class="bt-icon">👤</span><span>Clients</span>
+    <span class="bt-badge" id="client-count-badge-mobile">0</span>
+  </button>
+  <button class="bottom-tab" data-tab="proposals" onclick="switchTab('proposals')">
+    <span class="bt-icon">📄</span><span>Proposals</span>
+    <span class="bt-badge" id="proposal-count-badge-mobile">0</span>
+  </button>
+  <button class="bottom-tab" data-tab="activity" onclick="switchTab('activity')">
+    <span class="bt-icon">📋</span><span>Activity</span>
+  </button>
+  <button class="bottom-tab" data-tab="stack" onclick="switchTab('stack')">
+    <span class="bt-icon">🛠</span><span>Stack</span>
+  </button>
+</nav>
 
 <script>
 // ════════════════════════════════════════
@@ -802,15 +910,28 @@ function toast(msg, dur=2500) {
 // ════════════════════════════════════════
 // TAB SWITCHING
 // ════════════════════════════════════════
-function switchTab(id, btn) {
+function switchTab(id) {
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-btn, .bottom-tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
-  btn.classList.add('active');
+  document.querySelectorAll(`[data-tab="${id}"]`).forEach(b=>b.classList.add('active'));
   if (id==='clients')   renderClients();
   if (id==='proposals') renderProposalsTab();
   if (id==='activity')  renderActivity();
   if (id==='stack')     renderStack();
+  updateMobileNavVisibility();
+}
+
+// Tracks whether a mobile push/detail screen is open (chat session, client
+// detail, a client's proposal list, or a single proposal) so the bottom tab
+// bar can hide itself and give that screen the full height.
+function updateMobileNavVisibility() {
+  const focused =
+    document.getElementById('tab-chat').classList.contains('session-open') ||
+    document.getElementById('clients-layout')?.classList.contains('detail-open') ||
+    document.getElementById('proposals-layout')?.classList.contains('detail-open') ||
+    document.getElementById('proposal-detail-panel').classList.contains('open');
+  document.body.classList.toggle('mobile-focused', !!focused);
 }
 
 // ════════════════════════════════════════
@@ -877,6 +998,25 @@ function openSession(id) {
   document.getElementById('chat-client-name').textContent = session.clientName + (session.topic ? ' — ' + session.topic : '');
   document.getElementById('chat-stage-label').textContent = '⬡ ' + session.stage;
   renderMessages(session);
+  document.getElementById('tab-chat').classList.add('session-open');
+  updateMobileNavVisibility();
+}
+
+function backToChatList() {
+  document.getElementById('tab-chat').classList.remove('session-open');
+  updateMobileNavVisibility();
+}
+
+function backToClientsList() {
+  const el = document.getElementById('clients-layout');
+  if (el) el.classList.remove('detail-open');
+  updateMobileNavVisibility();
+}
+
+function backToProposalsClients() {
+  const el = document.getElementById('proposals-layout');
+  if (el) el.classList.remove('detail-open');
+  updateMobileNavVisibility();
 }
 
 function renderChatList() {
@@ -1181,6 +1321,9 @@ function renderClients() {
 function selectClient(id) {
   state.activeClientId = id;
   renderClients(); renderClientDetail(id);
+  const layout = document.getElementById('clients-layout');
+  if (layout) layout.classList.add('detail-open');
+  updateMobileNavVisibility();
 }
 
 function renderClientDetail(id) {
@@ -1191,6 +1334,7 @@ function renderClientDetail(id) {
   const clientSessions  = state.sessions.filter(s=>s.clientId===id);
 
   el.innerHTML = `
+    <button class="btn btn-ghost btn-sm mobile-back-btn" style="margin-bottom:14px" onclick="backToClientsList()">← Clients</button>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;gap:10px;flex-wrap:wrap">
       <div><h2>${client.name}</h2><p class="sub">${client.company||'No company'} · ${client.industry||'No industry'}</p></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1264,12 +1408,18 @@ function deleteClient(id) {
   save(); updateBadges(); state.activeClientId=null;
   renderClients(); renderProposalsClientList();
   document.getElementById('client-detail').innerHTML=`<div class="empty-state"><div class="icon">👤</div><strong>Select a client</strong></div>`;
+  const layout = document.getElementById('clients-layout');
+  if (layout) layout.classList.remove('detail-open');
+  updateMobileNavVisibility();
   logActivity('🗑','Client deleted',`<strong>${name}</strong>`);
 }
 
 function gotoProposal(clientId, proposalId) {
-  switchTab('proposals', document.querySelector('[data-tab="proposals"]'));
+  switchTab('proposals');
   state.proposalsClientId = clientId;
+  const layout = document.getElementById('proposals-layout');
+  if (layout) layout.classList.add('detail-open');
+  updateMobileNavVisibility();
   setTimeout(() => { renderProposalsTab(); openProposalDetailById(proposalId); }, 80);
 }
 
@@ -1297,6 +1447,9 @@ function selectProposalsClient(id) {
   state.proposalsClientId = id;
   renderProposalsClientList();
   renderProposalsForClient(id);
+  const layout = document.getElementById('proposals-layout');
+  if (layout) layout.classList.add('detail-open');
+  updateMobileNavVisibility();
 }
 
 function renderProposalsForClient(clientId) {
@@ -1353,6 +1506,7 @@ function openProposalDetailById(id) {
   document.getElementById('pd-toggle-raw').textContent = '✏ Edit raw';
   renderStatusHistory(p);
   document.getElementById('proposal-detail-panel').classList.add('open');
+  updateMobileNavVisibility();
 }
 
 function closeProposalDetail() {
@@ -1360,6 +1514,7 @@ function closeProposalDetail() {
   state.activeProposalId = null;
   if (state.proposalsClientId) renderProposalsForClient(state.proposalsClientId);
   else renderProposalsClientList();
+  updateMobileNavVisibility();
 }
 
 function toggleRawEdit() {
@@ -1564,6 +1719,10 @@ function renderStack() {
 function updateBadges() {
   document.getElementById('client-count-badge').textContent = state.clients.length;
   document.getElementById('proposal-count-badge').textContent = state.proposals.length;
+  const cbm = document.getElementById('client-count-badge-mobile');
+  if (cbm) cbm.textContent = state.clients.length;
+  const pbm = document.getElementById('proposal-count-badge-mobile');
+  if (pbm) pbm.textContent = state.proposals.length;
 }
 
 function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
@@ -1593,6 +1752,39 @@ function autoResize(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
+
+// ════════════════════════════════════════
+// PWA: install prompt + service worker
+// ════════════════════════════════════════
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById('install-btn').classList.add('visible');
+});
+
+async function installApp() {
+  if (!deferredInstallPrompt) return;
+  document.getElementById('install-btn').classList.remove('visible');
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+}
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-btn').classList.remove('visible');
+  toast('Meg A. Byte installed ✓');
+});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('Service worker registration failed:', err));
+  });
+}
+
+window.addEventListener('online',  () => toast('Back online ✓'));
+window.addEventListener('offline', () => toast('Offline — your data stays saved on this device'));
 
 // ════════════════════════════════════════
 // BOOT
