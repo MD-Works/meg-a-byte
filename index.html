@@ -529,7 +529,7 @@
   </div>
   <div class="header-actions">
     <button class="btn btn-ghost btn-sm" id="install-btn" onclick="installApp()">⬇ Install</button>
-    <button class="groq-badge" id="api-badge" onclick="openModal('api-modal')">⚡ Set Groq key</button>
+    <button class="groq-badge" id="api-badge" onclick="switchTab('settings')" title="API settings">⚡ Set Groq key</button>
   </div>
 </header>
 
@@ -540,6 +540,7 @@
   <button class="tab-btn"        data-tab="proposals" onclick="switchTab('proposals')">📄 Proposals <span class="badge" id="proposal-count-badge">0</span></button>
   <button class="tab-btn"        data-tab="activity"  onclick="switchTab('activity')">📋 Activity</button>
   <button class="tab-btn"        data-tab="stack"     onclick="switchTab('stack')">🛠 Stack & Rates</button>
+  <button class="tab-btn"        data-tab="settings"  onclick="switchTab('settings')">⚙️ Settings</button>
 </nav>
 
 <main>
@@ -685,6 +686,187 @@
   </div>
 </div>
 
+<!-- Settings tab -->
+<div class="tab-panel" id="tab-settings">
+
+  <!-- Sub-nav inside settings -->
+  <div style="display:flex;gap:2px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
+    <button class="tab-btn active" id="stab-config"  onclick="switchSettingsTab('config')"  style="font-size:12px;padding:8px 12px">⚙️ Config</button>
+    <button class="tab-btn"        id="stab-help"    onclick="switchSettingsTab('help')"    style="font-size:12px;padding:8px 12px">📖 How it works</button>
+    <button class="tab-btn"        id="stab-advisor" onclick="switchSettingsTab('advisor')" style="font-size:12px;padding:8px 12px">🧠 Strategy advisor</button>
+  </div>
+
+  <!-- ── Config panel ── -->
+  <div id="spanel-config" class="scroll">
+    <div style="margin-bottom:20px;margin-top:4px"><h2>Settings</h2><p class="sub">Configure Meg A. Byte for your workspace.</p></div>
+
+    <div class="stack-card" style="margin-bottom:16px">
+      <div class="stack-card-title"><span class="stack-icon">🔑</span>Groq API Key</div>
+      <div class="stack-card-desc" style="margin-bottom:14px">Meg runs on Groq. Your key is stored in your browser only — never sent anywhere except Groq directly. Get a free key at <a href="https://console.groq.com" target="_blank" style="color:var(--accent)">console.groq.com</a>.</div>
+      <div class="field" style="margin-bottom:10px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" id="settings-api-key-input" placeholder="gsk_…" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-mono)" />
+          <button class="btn btn-ghost btn-sm" id="settings-key-toggle" onclick="toggleSettingsKeyVisibility()" style="flex-shrink:0">👁</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="saveSettingsApiKey()">Save key</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearSettingsApiKey()">Clear key</button>
+      </div>
+      <div id="settings-key-status" style="margin-top:10px;font-size:12px;color:var(--text-muted)"></div>
+    </div>
+
+    <div class="stack-card" style="margin-bottom:16px">
+      <div class="stack-card-title"><span class="stack-icon">ℹ️</span>About</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.8">
+        <div><strong style="color:var(--text)">Meg A. Byte</strong> — MD Works Assistant</div>
+        <div>All data (clients, proposals, sessions) is stored locally in your browser.</div>
+        <div style="margin-top:10px">
+          <button class="btn btn-ghost btn-sm" onclick="exportData()">⬇ Export all data</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack-card" style="border-color:rgba(245,101,101,0.3)">
+      <div class="stack-card-title" style="color:var(--danger)"><span class="stack-icon">⚠️</span>Danger Zone</div>
+      <div class="stack-card-desc" style="margin-bottom:14px">Clear all locally stored data. This cannot be undone.</div>
+      <button class="btn btn-sm" style="background:rgba(245,101,101,0.15);color:var(--danger);border:1px solid rgba(245,101,101,0.3)" onclick="clearAllData()">🗑 Clear all data</button>
+    </div>
+  </div>
+
+  <!-- ── How it works panel ── -->
+  <div id="spanel-help" class="scroll" style="display:none">
+    <div style="margin-bottom:20px;margin-top:4px"><h2>How it works</h2><p class="sub">A plain-language guide to what MD Works builds, the tools used, and why they make sense for real-world South African projects.</p></div>
+
+    <div class="stack-card" style="margin-bottom:16px">
+      <div class="stack-card-title"><span class="stack-icon">🧩</span>What is this app?</div>
+      <div class="stack-card-desc">
+        Meg A. Byte is a smart intake assistant. When a potential client comes to MD Works with an idea — a booking system, a community app, an online store — Meg has a conversation with them to understand what they need. She then generates a proper written proposal with real costs, so Morney can hit the ground running without spending hours on discovery calls.
+        <br><br>Think of Meg as the friendly receptionist who already knows everything about what MD Works can build.
+      </div>
+    </div>
+
+    <div class="stack-card" style="margin-bottom:16px">
+      <div class="stack-card-title"><span class="stack-icon">🌐</span>Websites &amp; web apps — what's the difference?</div>
+      <div class="stack-card-desc">
+        A <strong style="color:var(--text)">website</strong> shows information — it's like a digital brochure. People read it but don't really interact with it.<br><br>
+        A <strong style="color:var(--text)">web app</strong> does things — people log in, submit forms, book appointments, track orders, manage data. Most clients who come to MD Works want a web app, even if they call it "just a website."<br><br>
+        The good news: both can be built without expensive servers or monthly hosting fees.
+      </div>
+    </div>
+
+    <div class="stack-card" style="margin-bottom:16px">
+      <div class="stack-card-title"><span class="stack-icon">🟠</span>Cloudflare — free hosting that works everywhere</div>
+      <div class="stack-card-desc">
+        Cloudflare is a global network used by millions of websites. MD Works uses two parts of it:<br><br>
+        <strong style="color:var(--text)">Cloudflare Pages</strong> — this is where the website or app files live. It's free, blazing fast, and your site loads quickly whether someone is in Durban, Cape Town, or London.<br><br>
+        <strong style="color:var(--text)">Cloudflare Workers</strong> — these are tiny pieces of code that run in the background to handle things like saving form submissions, checking passwords, or sending data somewhere. They run automatically and cost nothing on the free tier.<br><br>
+        <strong style="color:var(--text)">Why it matters:</strong> A typical client pays R 0/month in hosting. No server bills, no surprise invoices.
+      </div>
+    </div>
+
+    <div class="stack-card" style="margin-bottom:16px">
+      <div class="stack-card-title"><span class="stack-icon">🔷</span>Databases — where the information is stored</div>
+      <div class="stack-card-desc">
+        Every app that saves data needs a database. Think of it like a very organised Excel file that the app can read and update instantly.<br><br>
+        <strong style="color:var(--text)">Cloudflare D1</strong> — a proper database that lives on Cloudflare's network. Perfect for apps that need to store structured data like customers, bookings, products, or reports. It's fast, reliable, and free for most small-to-medium projects.<br><br>
+        <strong style="color:var(--text)">Google Sheets as a database</strong> — for simpler projects, MD Works can use a Google Sheet as the database. It sounds basic but it's surprisingly powerful: non-technical clients can view and edit their own data directly in a spreadsheet, without needing a custom admin panel. This cuts costs significantly.<br><br>
+        <strong style="color:var(--text)">Which one?</strong> Google Sheets works well for data that changes slowly (product catalogues, team rosters). D1 is better when many people are submitting data at the same time (bookings, orders, community reports).
+      </div>
+    </div>
+
+    <div class="stack-card" style="margin-bottom:16px">
+      <div class="stack-card-title"><span class="stack-icon">📱</span>PWA — an app without the App Store</div>
+      <div class="stack-card-desc">
+        A <strong style="color:var(--text)">Progressive Web App (PWA)</strong> is a website that behaves like a phone app. Users can add it to their home screen, use it offline, and get a full-screen experience — without going through the App Store or Google Play.<br><br>
+        This app (Meg A. Byte) is itself a PWA — you may have seen the "Install" button in the header.<br><br>
+        <strong style="color:var(--text)">Why it matters for South Africa:</strong> Many users are on prepaid data or have unreliable connections. PWAs cache themselves so the app still works even when the signal drops. That makes them ideal for field workers, informal traders, or anyone away from reliable WiFi.
+      </div>
+    </div>
+
+    <div class="stack-card" style="margin-bottom:16px">
+      <div class="stack-card-title"><span class="stack-icon">🗺️</span>Maps &amp; location features</div>
+      <div class="stack-card-desc">
+        MD Works uses <strong style="color:var(--text)">Leaflet.js</strong> for interactive maps. This is a free, open-source mapping tool — unlike Google Maps, it doesn't charge per page load.<br><br>
+        Common uses: showing business locations, letting users drop a pin for delivery addresses, filtering points of interest near you, drawing routes, or displaying geo-tagged community reports.<br><br>
+        Address search uses <strong style="color:var(--text)">Nominatim</strong> — a free geocoding service (the same data behind OpenStreetMap). No API keys, no billing surprises.
+      </div>
+    </div>
+
+    <div class="stack-card" style="margin-bottom:16px">
+      <div class="stack-card-title"><span class="stack-icon">💬</span>WhatsApp integration</div>
+      <div class="stack-card-desc">
+        WhatsApp is how South Africa communicates. MD Works can wire it into any app using simple deep links — when something happens in the app (a new booking, a winner selected, a form submitted), it opens WhatsApp with a pre-filled message ready to send.<br><br>
+        <strong style="color:var(--text)">No monthly fee.</strong> This isn't the enterprise WhatsApp Business API (which costs money). It's a clever use of how WhatsApp handles links — completely free and works on any phone.<br><br>
+        It keeps a human in the loop: the message is ready, you just tap Send. Great for community managers, small businesses, and anyone who already lives in WhatsApp.
+      </div>
+    </div>
+
+    <div class="stack-card" style="margin-bottom:16px">
+      <div class="stack-card-title"><span class="stack-icon">🤖</span>AI chatbots — what's actually possible</div>
+      <div class="stack-card-desc">
+        An AI chatbot embedded in your app can answer customer questions, guide users through a process, help people fill in forms, or act as a smart FAQ — available 24/7 without a person on standby.<br><br>
+        MD Works uses <strong style="color:var(--text)">Groq</strong> (which runs Meta's Llama AI models, the same technology behind many AI assistants) and <strong style="color:var(--text)">Anthropic Claude</strong>. Both can be given a "personality" and a knowledge base specific to your business.<br><br>
+        <strong style="color:var(--text)">What chatbots can do well:</strong> answer repetitive questions, collect information from users, suggest products, explain options, speak multiple languages.<br><br>
+        <strong style="color:var(--text)">What they're not:</strong> they're not magic. They work best when given clear rules and a defined scope. A chatbot for a salon booking service will be excellent; a chatbot asked to handle every possible human question without guidance will struggle.
+      </div>
+    </div>
+
+    <div class="stack-card" style="margin-bottom:16px">
+      <div class="stack-card-title"><span class="stack-icon">🔐</span>Logins &amp; security</div>
+      <div class="stack-card-desc">
+        Most apps need some kind of access control — you don't want just anyone editing your data.<br><br>
+        MD Works keeps this simple and affordable. For admin-only access, a secure PIN stored privately on the server does the job without any third-party login service. For multi-user apps where staff need separate accounts, invite tokens let new users sign up via a private link.<br><br>
+        <strong style="color:var(--text)">Why not Google or Facebook login?</strong> Those services are free but come with complexity, privacy considerations, and dependency on third parties. For most small South African projects, a clean PIN or token system is simpler, cheaper, and just as secure.
+      </div>
+    </div>
+
+    <div class="stack-card" style="margin-bottom:16px">
+      <div class="stack-card-title"><span class="stack-icon">💰</span>How pricing works</div>
+      <div class="stack-card-desc">
+        MD Works quotes <strong style="color:var(--text)">fixed prices per project</strong> — not hourly rates. That means you know the total cost before work starts, with no surprise invoices.<br><br>
+        Typical ranges:<br>
+        • Landing page / brochure site: R 3,000 – R 8,000<br>
+        • Web app (forms, data, user accounts): R 8,000 – R 35,000<br>
+        • Full stack with custom API: R 6,000 – R 18,000<br>
+        • Timeline: 1–3 days for simple sites, 1–6 weeks for apps<br><br>
+        The pricing reflects the South African market. MD Works deliberately avoids bloated frameworks and expensive infrastructure — the goal is maximum value per rand spent.
+      </div>
+    </div>
+
+    <div class="stack-card" style="margin-bottom:16px">
+      <div class="stack-card-title"><span class="stack-icon">🛠</span>How to use this app effectively</div>
+      <div class="stack-card-desc">
+        <strong style="color:var(--text)">1. Add a client</strong> — go to the Clients tab and capture their name, company, contact details, and industry. Even rough notes help Meg ask better questions.<br><br>
+        <strong style="color:var(--text)">2. Start a session</strong> — open the Assistant tab and start a new session with that client. Let Meg guide the conversation. She'll ask about features, users, budget, and timeline — one question at a time.<br><br>
+        <strong style="color:var(--text)">3. Generate a proposal</strong> — once Meg says she has enough to work with, tap "Generate proposal." She'll produce a professional, itemised proposal in seconds.<br><br>
+        <strong style="color:var(--text)">4. Share it</strong> — view the proposal in the Proposals tab. You can copy it, print it, download it as HTML, or send it via WhatsApp or email directly from the app.<br><br>
+        <strong style="color:var(--text)">Tip:</strong> You can share a client's phone or screen during the Meg session — many clients enjoy chatting with her directly. She's friendly, speaks their language (literally — try writing to her in Afrikaans or Zulu), and they feel heard.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Strategy advisor panel ── -->
+  <div id="spanel-advisor" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+    <div style="padding:16px 24px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <h2 style="margin-bottom:2px">Strategy advisor</h2>
+      <p class="sub" style="margin-bottom:0">Ask anything about what's possible, how the tech works, or how to approach a client's idea. Plain language, no jargon required.</p>
+    </div>
+    <div class="chat-messages" id="advisor-messages" style="flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:12px"></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0">
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <textarea id="advisor-input" placeholder="e.g. Can a client track delivery drivers on a map? How much would that cost?" rows="2"
+          style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;color:var(--text);font-size:13px;resize:none;line-height:1.5;font-family:inherit"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdvisorMessage()}"
+          oninput="autoResize(this)"></textarea>
+        <button class="btn btn-primary" onclick="sendAdvisorMessage()" style="padding:10px 14px;flex-shrink:0">↑</button>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px" id="advisor-suggestions"></div>
+    </div>
+  </div>
+
+</div>
+
 </main>
 
 <!-- Bottom tab bar — mobile only -->
@@ -705,6 +887,9 @@
   </button>
   <button class="bottom-tab" data-tab="stack" onclick="switchTab('stack')">
     <span class="bt-icon">🛠</span><span>Stack</span>
+  </button>
+  <button class="bottom-tab" data-tab="settings" onclick="switchTab('settings')">
+    <span class="bt-icon">⚙️</span><span>Settings</span>
   </button>
 </nav>
 
@@ -898,6 +1083,7 @@ function updateApiBadge() {
   const b = document.getElementById('api-badge');
   if (state.apiKey) { b.textContent = '✓ Groq connected'; b.classList.add('configured'); }
   else { b.textContent = '⚡ Set Groq key'; b.classList.remove('configured'); }
+  b.onclick = () => switchTab('settings');
 }
 
 // ════════════════════════════════════════
@@ -921,6 +1107,7 @@ function switchTab(id) {
   if (id==='proposals') renderProposalsTab();
   if (id==='activity')  renderActivity();
   if (id==='stack')     renderStack();
+  if (id==='settings')  { switchSettingsTab('config'); renderSettings(); }
   updateMobileNavVisibility();
 }
 
@@ -942,7 +1129,7 @@ function updateMobileNavVisibility() {
 let pickedClientId = null;
 
 function openSessionModal() {
-  if (!state.apiKey) { openModal('api-modal'); return; }
+  if (!state.apiKey) { toast('Add your Groq key in Settings first ⚙️'); switchTab('settings'); return; }
   pickedClientId = null;
   const grid = document.getElementById('session-client-picker');
   if (state.clients.length === 0) {
@@ -980,7 +1167,7 @@ function confirmNewSession() {
   };
   state.sessions.unshift(session);
   state.activeSessionId = session.id;
-  save(); renderChatList(); openSession(session.id);
+  save(); switchTab('chat'); renderChatList(); openSession(session.id);
   logActivity('💬','New session started',`with <strong>${client.name}</strong>${topic?' — '+topic:''}`);
 
   const greeting = `Hi! I'm Meg A. Byte — the MD Works project assistant. 👋\n\nI'm here to help Morney understand your project so we can put together a tailored proposal and cost estimate.${topic ? `\n\nI see you've noted: "${topic}" — great starting point!` : ''}\n\nTo kick things off — what would you like to build? Even a rough concept works perfectly. The more you share, the better I can scope it.`;
@@ -1054,7 +1241,7 @@ function addMessage(sessionId, role, content) {
 
 async function sendMessage() {
   if (!state.activeSessionId) return;
-  if (!state.apiKey) { openModal('api-modal'); return; }
+  if (!state.apiKey) { toast('Add your Groq key in Settings first ⚙️'); switchTab('settings'); return; }
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
   if (!text) return;
@@ -1148,7 +1335,7 @@ let _pendingProposalLang = null;
 
 async function generateProposal() {
   if (!state.activeSessionId) return;
-  if (!state.apiKey) { openModal('api-modal'); return; }
+  if (!state.apiKey) { toast('Add your Groq key in Settings first ⚙️'); switchTab('settings'); return; }
   const session = state.sessions.find(s=>s.id===state.activeSessionId);
   if (!session) return;
 
@@ -1266,7 +1453,8 @@ LANGUAGE: Write this entire proposal in ${language}. Every heading, sentence, an
       save();
     }
     logActivity('📄','Proposal created',`<strong>${title}</strong> · ${language}`);
-    addMessage(state.activeSessionId,'assistant',`✅ Proposal created in ${language}: "${title}"\n\nYou can view, edit, and send it from the Proposals tab.`);
+    addMessage(state.activeSessionId,'assistant',`✅ Proposal created in ${language}: "${title}"\n\nOpening it in the Proposals tab now…`);
+    setTimeout(() => gotoProposal(proposal.clientId, proposal.id), 800);
   } catch(err) {
     addMessage(state.activeSessionId,'assistant',`⚠ Could not generate proposal: ${err.message}`);
   } finally {
@@ -1752,6 +1940,200 @@ function renderStack() {
 }
 
 // ════════════════════════════════════════
+// SETTINGS SUB-TABS
+// ════════════════════════════════════════
+function switchSettingsTab(id) {
+  ['config','help','advisor'].forEach(t => {
+    const panel = document.getElementById('spanel-'+t);
+    const btn   = document.getElementById('stab-'+t);
+    const isActive = t === id;
+    btn.classList.toggle('active', isActive);
+    if (t === 'advisor') {
+      panel.style.display = isActive ? 'flex' : 'none';
+    } else {
+      panel.style.display = isActive ? 'block' : 'none';
+    }
+  });
+  if (id === 'advisor') renderAdvisorSuggestions();
+}
+
+// ════════════════════════════════════════
+// STRATEGY ADVISOR CHATBOT
+// ════════════════════════════════════════
+const ADVISOR_SYSTEM = `You are the MD Works Strategy Advisor — a friendly, knowledgeable guide who helps Morney (the developer) and potential clients understand what software solutions are possible, how they work, and when they make sense.
+
+Your audience is often NON-TECHNICAL — business owners, community managers, entrepreneurs. Avoid jargon. When you must use a technical term, explain it in plain language immediately.
+
+You know the MD Works tech stack deeply:
+- Static websites (HTML/CSS/JS) — fast, cheap, deployable anywhere
+- Cloudflare Pages: free global hosting; Cloudflare Workers: free serverless code that runs in the background; D1: a proper database that lives on Cloudflare's network (like an always-on spreadsheet that an app can read/write in milliseconds)
+- Google Apps Script + Sheets: use a Google Sheet as a database — zero cost, clients can see/edit their own data in a spreadsheet, perfect for simpler apps
+- Leaflet.js maps: free interactive maps with markers, filters, route drawing, address search — no Google Maps billing
+- PWA (Progressive Web App): a website that installs on your phone like an app, works offline, no App Store needed — ideal for low-connectivity South African contexts
+- WhatsApp deep links: free WhatsApp integration via wa.me links — no Business API cost, keeps a human in the loop
+- AI chatbots (Groq/Llama 3 or Claude): embeddable AI assistants with custom knowledge bases, multi-language, available 24/7
+- Image uploads via ImgBB: free client-side image upload, no Google Drive complexity
+- Auth: PIN-based admin access, invite token multi-user — simple, secure, zero third-party cost
+- Pricing: fixed-price projects in ZAR. Landing pages R3k–R8k. Web apps R8k–R35k. APIs R6k–R18k. Timeline 1 day to 6 weeks.
+
+When someone describes a business idea or problem, help them understand:
+1. What is technically possible
+2. Which tools MD Works would use and why (in plain language)
+3. Rough cost and timeline expectations
+4. Any important trade-offs or things to watch out for
+
+Be warm, encouraging, and practical. South African context matters — mention load-shedding resilience, data costs, WhatsApp as the dominant communication channel, and ZAR pricing naturally when relevant.
+
+Keep responses conversational and focused. Use short paragraphs. Bullet points are fine for lists of features or options.`;
+
+let advisorHistory = [];
+
+function renderAdvisorSuggestions() {
+  const suggestions = [
+    'What can a small business actually afford to build?',
+    'Can I have an app that works without internet?',
+    'How would a booking system work?',
+    'What\'s the difference between a website and a web app?',
+    'Can clients track deliveries on a map?',
+    'How do AI chatbots work in plain English?',
+    'What would a community reporting app look like?',
+    'How does Cloudflare D1 compare to a normal database?',
+  ];
+  const el = document.getElementById('advisor-suggestions');
+  if (!el || advisorHistory.length > 0) { if(el) el.style.display='none'; return; }
+  el.innerHTML = suggestions.map(s =>
+    `<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px;border-radius:20px" onclick="quickAdvisor(this.textContent)">${s}</button>`
+  ).join('');
+  el.style.display = 'flex';
+}
+
+function quickAdvisor(text) {
+  document.getElementById('advisor-input').value = text;
+  sendAdvisorMessage();
+}
+
+function appendAdvisorMessage(role, content) {
+  const el = document.getElementById('advisor-messages');
+  const div = document.createElement('div');
+  const isUser = role === 'user';
+  div.style.cssText = `display:flex;justify-content:${isUser?'flex-end':'flex-start'};`;
+  div.innerHTML = `<div style="max-width:80%;padding:10px 14px;border-radius:${isUser?'16px 16px 4px 16px':'16px 16px 16px 4px'};background:${isUser?'var(--accent)':'var(--surface2)'};color:var(--text);font-size:13px;line-height:1.6;white-space:pre-wrap">${escHtml(content)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  return div;
+}
+
+function appendAdvisorTyping() {
+  const el = document.getElementById('advisor-messages');
+  const div = document.createElement('div');
+  div.id = 'advisor-typing';
+  div.style.cssText = 'display:flex;justify-content:flex-start;';
+  div.innerHTML = `<div style="padding:10px 14px;border-radius:16px 16px 16px 4px;background:var(--surface2);color:var(--text-muted);font-size:13px">Thinking…</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendAdvisorMessage() {
+  if (!state.apiKey) { toast('Add your Groq key in Settings → Config first ⚙️'); switchSettingsTab('config'); return; }
+  const input = document.getElementById('advisor-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = ''; input.style.height = 'auto';
+
+  // Hide suggestions
+  const sugg = document.getElementById('advisor-suggestions');
+  if (sugg) sugg.style.display = 'none';
+
+  advisorHistory.push({ role:'user', content: text });
+  appendAdvisorMessage('user', text);
+  appendAdvisorTyping();
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${state.apiKey}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role:'system', content: ADVISOR_SYSTEM },
+          ...advisorHistory
+        ],
+        temperature: 0.5, max_tokens: 800,
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices[0].message.content;
+    advisorHistory.push({ role:'assistant', content: reply });
+    document.getElementById('advisor-typing')?.remove();
+    appendAdvisorMessage('assistant', reply);
+  } catch(err) {
+    document.getElementById('advisor-typing')?.remove();
+    appendAdvisorMessage('assistant', '⚠ Could not reach Groq: ' + err.message);
+  }
+}
+
+// ════════════════════════════════════════
+// SETTINGS
+// ════════════════════════════════════════
+function renderSettings() {
+  const input = document.getElementById('settings-api-key-input');
+  const status = document.getElementById('settings-key-status');
+  if (state.apiKey) {
+    input.value = state.apiKey;
+    status.innerHTML = `<span style="color:var(--success)">✓ Key saved — Meg is connected</span>`;
+  } else {
+    input.value = '';
+    status.innerHTML = `<span style="color:var(--warn)">⚡ No key set — Meg won't respond until you add one</span>`;
+  }
+}
+
+function saveSettingsApiKey() {
+  const val = document.getElementById('settings-api-key-input').value.trim();
+  if (!val) { toast('Paste your Groq key first'); return; }
+  state.apiKey = val;
+  localStorage.setItem('mdworks_groq_key', val);
+  updateApiBadge();
+  renderSettings();
+  toast('Groq key saved ✓');
+}
+
+function clearSettingsApiKey() {
+  if (!confirm('Remove the saved Groq key?')) return;
+  state.apiKey = '';
+  localStorage.removeItem('mdworks_groq_key');
+  updateApiBadge();
+  renderSettings();
+  toast('Key cleared');
+}
+
+let _settingsKeyVisible = false;
+function toggleSettingsKeyVisibility() {
+  _settingsKeyVisible = !_settingsKeyVisible;
+  const input = document.getElementById('settings-api-key-input');
+  const btn = document.getElementById('settings-key-toggle');
+  input.type = _settingsKeyVisible ? 'text' : 'password';
+  btn.textContent = _settingsKeyVisible ? '🙈' : '👁';
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify({clients:state.clients,proposals:state.proposals,sessions:state.sessions,activity:state.activity}, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `meg-export-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('Data exported ✓');
+}
+
+function clearAllData() {
+  if (!confirm('Delete ALL clients, proposals, sessions and activity? This cannot be undone.')) return;
+  state.clients = []; state.proposals = []; state.sessions = []; state.activity = [];
+  save();
+  updateBadges();
+  renderSettings();
+  toast('All data cleared');
+}
+
+// ════════════════════════════════════════
 // BADGES & UTILS
 // ════════════════════════════════════════
 function updateBadges() {
@@ -1834,7 +2216,7 @@ renderChatList();
 renderStack();
 
 if (!state.apiKey) {
-  setTimeout(() => openModal('api-modal'), 600);
+  setTimeout(() => { toast('Add your Groq key in Settings to get started ⚙️'); switchTab('settings'); }, 600);
 }
 </script>
 </body>
